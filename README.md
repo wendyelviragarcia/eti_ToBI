@@ -2,19 +2,21 @@
 
 A Praat script for Sp_ToBI and Cat_ToBI intonational annotation 
 
-Citation: Elvira-Garcia, W., Roseano, P., Fernández-Planas, A. M., & Martinez-Celdran, E. (2016). A tool for automatic transcription of intonation: Eti_ToBI a ToBI transcriber for Spanish and Catalan. Language Resources and Evaluation, 50(4), 767-792.
+Citation: Elvira-García, W., Roseano, P., Fernández-Planas, A. M., & Martinez-Celdran, E. (2016). A tool for automatic transcription of intonation: Eti_ToBI a ToBI transcriber for Spanish and Catalan. Language Resources and Evaluation, 50(4), 767-792.
 
 
 ### DESCRIPTION
 This is a tool that automatically labels intonational events according to the Sp_ToBI and Cat_ToBI current systems. T
-	The system consist on a Praat script that assigns ToBI labels from lexical data introduced by the researcher and the
-	acoustical data that it extracts from sound files.  The reliability results for both Cat_ToBI and Sp_ToBI corpora shows
-	a level of agreement equal to the one shown by human transcribers among them in the literature.
+The system consist on a Praat script that assigns ToBI labels from lexical data introduced by the researcher and the
+acoustical data that it extracts from sound files.  The reliability results for both Cat_ToBI and Sp_ToBI corpora shows
+a level of agreement equal to the one shown by human transcribers among them in the literature.
+	
+It is prepared to label any Spanish dialect, but it has been trained with Peninsular Spanish.
 
 ### INSTRUCTIONS
 0. Needs 
-		a) a folder with sounds (a sentence in each wav)
-		b) textgrid with the same name than the sound and interval syllables and a mark for the stressed syllables. Every (file or IP must have at least a stressed syllable marked)
+a) a folder with sounds (a sentence in each wav)
+b) textgrid with the same name than the sound and interval syllables and a mark for the stressed syllables. Every (file or IP must have at least a stressed syllable marked)
 	
 	
 
