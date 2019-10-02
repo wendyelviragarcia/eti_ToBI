@@ -1898,7 +1898,8 @@ printline numberOfIntervals 'numberOfIntervals'
 		endif
 		# guardo para la proxima vez que pase que el inicio de la IP tiene que ser el final de la que acaba de pasar
 		startIntervalIP = endIntervalIP
-	endfor #acaba el bucle para las IP 
+	endfor 
+	#acaba el bucle para las IP 
 
 
 	############## BREAK INDEX 3	##############
