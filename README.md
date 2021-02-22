@@ -2,7 +2,7 @@
 
 A Praat script for Sp_ToBI and Cat_ToBI intonational annotation 
 
-Citation: Elvira-García, W., Roseano, P., Fernández-Planas, A. M., & Martinez-Celdran, E. (2016). A tool for automatic transcription of intonation: Eti_ToBI a ToBI transcriber for Spanish and Catalan. Language Resources and Evaluation, 50(4), 767-792.
+**Citation: Elvira-García, W., Roseano, P., Fernández-Planas, A. M., & Martinez-Celdran, E. (2016). A tool for automatic transcription of intonation: Eti_ToBI a ToBI transcriber for Spanish and Catalan. Language Resources and Evaluation, 50(4), 767-792.**
 
 
 ### DESCRIPTION
