@@ -2,7 +2,7 @@
 #
 #
 #
-#	This is a tool that automatically labels intonational events according to the Sp_ToBI and Cat_ToBI current systems. T
+#	This is a tool that automatically labels intonational events according to the Sp_ToBI and Cat_ToBI 2015 current systems. T
 #	The system consist on a Praat script that assigns ToBI labels from lexical data introduced by the researcher and the
 #	acoustical data that it extracts from sound files.  The reliability results for both Cat_ToBI and Sp_ToBI corpora shows
 #	a level of agreement equal to the one shown by human transcribers among them in the literature.
@@ -14,8 +14,8 @@
 #		a) a folder with sounds (a sentence in each wav)
 #		b) textgrid with the same name than the sound and interval syllables and a mark for the stressed syllables
 #	
-#	Wendy Elvira-García (2013-2015). Eti-ToBI. [praat script]Retrieved from http://stel.ub.edu/labfon/en/praat-scripts
-#	w e n d y e l v i r a g a r c i a @ g m a i l . c o m
+#	Wendy Elvira-García (2013-2015). Eti-ToBI. [praat script] Retrieved from https://github.com/wendyelviragarcia/eti_ToBI
+#	wendy elvira (at) ub.edu
 #	
 #	Laboratori de Fonètica (Universitat de Barcelona)
 #
@@ -38,11 +38,15 @@
 #####	FORMULARIO	##########
 form Sp_ToBI Cat_ToBI transcriber
 	
-	sentence folder /Users/weg/Desktop/paraprobar
+	#sentence folder /Users/weg/Desktop/test
+
+	sentence folder ./data_for_testing/
+
+
 	# EN EL LAB
 	word Marca_de_tonica ˈ
 	comment ¿En que número de tier está la marca de tonicidad?
-	integer Tier_tonicidad 1
+	integer segmentation_tier 1
 	comment ¿Tienes marcados los break indices?
 	boolean BI 1
 	#comment ¿En qué número de tier?
@@ -69,6 +73,7 @@ form Sp_ToBI Cat_ToBI transcriber
 	boolean correccion 0
 	boolean create_picture 1
 integer iniciar_en_archivo 1
+	boolean verbose 1
 
 endform
 
@@ -126,64 +131,102 @@ f0_min = 'f0_min$'
 
 numberOfLetras = 15
 umbralnegativo = umbral - (2*umbral)
-ultimatonica = 0
+ultimastressed = 0
 etiquetaprofunda$ = "* no"
 etiquetatonoprofundo$ = " * aguda"
 etiquetafinalprofunda$ = "\% "
 
+# for spanish nucleus is always last lexical stress
+nucleus_method$ = "manual"
+
 ##############	BUCLE GENERAL 	######################
 # Crea la lista de objetos desde el string
-Create Strings as file list: "list", folder$ + "/" + "*.wav"
-#Hace el bucle con ello
+myFileList= Create Strings as file list: "list", folder$ + "/" + "*"
 numberOfFiles = Get number of strings
 
-if numberOfFiles = 0 
-	Create Strings as file list: "list", folder$ + "/" + "*.WAV"
-	numberOfFiles = Get number of strings
-endif
+for stri to numberOfFiles
+	filename$ = Get string: stri
+	if (right$(filename$, 4) <> ".wav") and (right$(filename$, 4) <> ".WAV")
+ 		Remove string: stri
+ 		stri= stri-1
+ 		numberOfFiles= numberOfFiles-1
+ 	endif
+endfor
+
+numberOfFiles = Get number of strings
+
 
 if numberOfFiles = 0 
-	exit: "There are no .wav or .WAV files in folder" + folder$
+	exitScript: "There are no .wav or .WAV files in folder" + folder$
 endif
+
+nucleusData = Create Table with column names: "nucleus", 0, "file nucleus last difInt nucleusRange range lastRange "
+allTable = Create Table with column names: "allTable", 0, "file interval humanNPA NPA intensity stringInt range stringRange dur stringDur durPre"
+
 
 
 #bucle archivos
 for ifile from 'from' to numberOfFiles
-echo Working on file 'ifile'
-	select Strings list
-	archivosonido$ = Get string: ifile
-	base$ = archivosonido$ - ".wav"
-	base$ = base$ - ".WAV"
+	stressedstotalesfile= 0
 
-	#reads sound 
-	mySound = Read from file: folder$ +"/" + archivosonido$
+	select Strings list
+	soundFile$ = Get string: ifile
+	base$ = soundFile$ - ".wav"
+	base$ = base$ - ".WAV"
+	writeInfoLine: "Working on file " + string$(ifile) + ": "+ base$
+
+	#reads sound
+	if fileReadable(folder$ +"/" + soundFile$)
+		mySound = Read from file: folder$ +"/" + soundFile$
+	else
+		exitScript: "No file in " + folder$ + " called " + soundFile$ + "."
+	endif
 
 	#reads grid
-	myText = Read from file: folder$ + "/" +base$ + ".TextGrid"
+	if fileReadable(folder$ + "/" +base$ + ".TextGrid")
+		myText = Read from file: folder$ + "/" +base$ + ".TextGrid"
+	else 
+		exitScript: "There are no TextGrids matching your sound " + base$ + ". Check for spaces in filename"
+	endif
+
+	numberOfIntervals = Get number of intervals: segmentation_tier
+	soundBegins = Get end point: segmentation_tier, 1
+	soundEnds = Get start point: segmentation_tier, numberOfIntervals
 
 	#########	CREA OBJETOS ########
-
-
-
-	select Sound 'base$'
-	#elimina todas las frecuencias superiores a 900Hz para minimizar los Pitch de las fricativas que están a 2000 y 3000 Hz
-	Filter (stop Hann band): 900, 20000, 100
-	#sacar la gama
-	select Sound 'base$'_band
-	 To Pitch... 0.001 f0_min f0_max
-	select Pitch 'base$'_band
+	#clean soundwav
+	selectObject: mySound 
+	filteredSound = Filter (stop Hann band): 2000, 5000, 100
 	Rename: base$
 
-	printline frase 'base$'
+	firstPitch = To Pitch: 0.001, f0_min, f0_max
+
 	f0medial = do ("Get mean...", 0, 0, "Hertz")
-	printline mediana de la frase: 'f0medial'
-	#minpitch = do ("Get minimum...", 0, 0, "Hertz", "Parabolic")
-	#maxpitch = do ("Get maximum...", 0, 0, "Hertz", "Parabolic")
+	@printData("fileMean: " + fixed$(f0medial,0)+"Hz")
+	
 	#cuantiles teoría de Hirst (2011) analysis by synthesis of speach melody
-	q25 = Get quantile: 0, 0, 0.25, "Hertz"
-	q75 = Get quantile: 0, 0, 0.75, "Hertz"
-	minpitch = q25 * 0.75
-	maxpitch = q75 * 1.5
+	q25 = Get quantile: soundBegins, soundEnds, 0.25, "Hertz"
+	q75 = Get quantile: soundBegins, soundEnds, 0.75, "Hertz"
+	
+
+	if q25 != undefined
+		minpitch = q25 * 0.75
+	else
+		minpitch = f0_min
+
+	endif
+	
+	if q75 != undefined
+		maxpitch = q75 * 2.5
+		#set to 2.5 for expressive speech because portuguese range goes over the octave, else 1.5
+	else
+		maxpitch= f0_max
+	endif
+
+	selectObject: filteredSound 
+	myPitch = To Pitch: 0.001, minpitch, maxpitch
+	Kill octave jumps
+	removeObject: firstPitch
 
 	gama = maxpitch - minpitch
 
@@ -191,26 +234,33 @@ echo Working on file 'ifile'
 	tercio1 = minpitch + terciogama
 	tercio2 = minpitch + (2*terciogama)
 	tercio3 = minpitch + (3*terciogama)
+	@printData("Low range less than: "+ fixed$(tercio2,0) +"Hz. Mid range from: "+ fixed$(tercio1,0) + " Hz. High range more than"+ fixed$(tercio2,0)+ "Hz.")
+	
+	Interpolate
+	myPitchTier= Down to PitchTier
+	selectObject: mySound
+	intensity = To Intensity: 100, 0, "yes"
+	intTable = Create Table with column names: "intTable", 0, "interval intensity stringInt range stringRange dur stringDur durPre"
 
 
-	# esto estiliza la curva pero cuando la frase es larga aumenta mucho la frecuencia de la primera parte. Por eso primero saco la mediana de la frase.
-	#do ("Kill octave jumps")
-	do ("Interpolate")
-	#esto es para que no salgan valores como undefined (salen si hay partes sordas o ensordecidas)
-	do ("Down to PitchTier")
 
 
 	#########	EMPIEZA EL SCRIPT		#####################
-	select TextGrid 'base$'
-	numberOfIntervals = Get number of intervals: tier_tonicidad
+
+	selectObject: myText
+	numberOfIntervals = Get number of intervals: segmentation_tier
 	i = 1
-printline numberOfIntervals 'numberOfIntervals'
+
+
+
+
+
 
 	### sustitucion de caracteres
 	marcatonicacompleja$ = "\'1"
 	if marca_de_tonica$ = marcatonicacompleja$
 		select TextGrid 'base$'
-		do ("Replace interval text...", tier_tonicidad, i, numberOfIntervals, "\'1", "ˈ", "Regular Expressions")
+		do ("Replace interval text...", segmentation_tier, i, numberOfIntervals, "\'1", "ˈ", "Regular Expressions")
 
 		marca_de_tonica$ = "ˈ"
 	endif
@@ -223,8 +273,8 @@ printline numberOfIntervals 'numberOfIntervals'
 		Insert point tier... 'tier_Tones' "Tones"
 	endif
 	if  etiquetaje_profundo = 1
-		tier_profundo = tier_Tones + 1
-		Insert point tier... 'tier_profundo' "Tones II"
+		deep_tier = tier_Tones + 1
+		Insert point tier... 'deep_tier' "Tones II"
 	endif
 
 	#bucle silabas
@@ -236,43 +286,44 @@ printline numberOfIntervals 'numberOfIntervals'
 		numberOfIPs = 1
 		selectObject: "TextGrid " + base$ 
 		endOfSound= Get end time
-		lastInt = Get number of intervals: tier_tonicidad
-		lastBoundary = Get end point: tier_tonicidad, lastInt
+		lastInt = Get number of intervals: segmentation_tier
+		lastBoundary = Get end point: segmentation_tier, lastInt
 		myPointProcess = Create empty PointProcess: base$, 0, endOfSound
 		Add point: lastBoundary
-		endIntervalIP =1
+		endIntervalIP = 1
 	endif
 	
-	startIntervalIP = 1
-	iIP=0
+
+	startIntervalIP = 0
+	iIP = 1
+	numberOfsyllablesIP = 0
+
 	for iIP from 1 to numberOfIPs
 		# get la aparicion iIP de las ip
+		stressedstotalesfrase = 0
 		
+		stressedInventory = Create Table with column names: "stressedInventory", 0, "n nInterval isNucleus"
+
 		selectObject: myPointProcess
 		timeOf4Boundary = Get time from index: iIP
 		select TextGrid 'base$'
-		endIntervalIP = Get interval at time: tier_tonicidad, timeOf4Boundary
+		endIntervalIP = Get interval at time: segmentation_tier, timeOf4Boundary
 		endIntervalIP =endIntervalIP-1
 		actualInterval=0
-		tonicastotalesfrase = 0
 
 
-		i=0
+		i=1
 		for i to endIntervalIP-startIntervalIP
-		printline START 'startIntervalIP'
-		printline ENDIP 'endIntervalIP'
-
+		
 			actualInterval = startIntervalIP + i
+			numberOfsyllablesIP =numberOfsyllablesIP 
 
-			if actualInterval< numberOfIntervals
+			if actualInterval < numberOfIntervals
 
 				#for i to numberOfIntervals
 				numberdesdeelfinal = endIntervalIP - actualInterval
 				select TextGrid 'base$'
-
-				########################## 	cálculo de tónicas 	####################################
-	printline ACTUALINTERVAL 'actualInterval'
-				labeli$ = Get label of interval: tier_tonicidad, actualInterval
+				labeli$ = Get label of interval: segmentation_tier, actualInterval
 
 				# Hago un array que guarda los caracteres en variables diferentes
 				for letra from 1 to numberOfLetras
@@ -280,70 +331,128 @@ printline numberOfIntervals 'numberOfIntervals'
 				endfor
 
 				if labeltext$[1] = marca_de_tonica$
-					ultimatonica = actualInterval
-					
-					if ultimatonica < 1
-						exit No hay ninguna marca de tónica en esta frase
-					endif
-				printline
-				printline ANÁLISIS TÓNICA DEL INTERVALO 'ultimatonica'
-					tonicastotalesfrase = tonicastotalesfrase + 1
-					startingpointtonica = Get start point... 'tier_tonicidad' 'actualInterval'
-					endingpointtonica = Get end point... 'tier_tonicidad' 'actualInterval'
-					durtonica = endingpointtonica - startingpointtonica
-					mediotonica = startingpointtonica + (durtonica/2)
+					ultimastressed = actualInterval
+					delayedPeak= 0
 
-					numberOfIntervalPretonica = actualInterval - (1)
-					startingpointpretonica = Get start point... 'tier_tonicidad' 'numberOfIntervalPretonica'
-					endingpointpretonica = Get end point... 'tier_tonicidad' 'numberOfIntervalPretonica'
-					durpretonica = endingpointpretonica - startingpointpretonica
-					mediopretonica = startingpointpretonica + (durpretonica/2)
-						printline tonica centro: 'mediotonica'
-					numberOfIntervalPostonica = actualInterval + 1
-					startingpointpostonica = Get start point... 'tier_tonicidad' 'numberOfIntervalPostonica'
-					endingpointpostonica = Get end point... 'tier_tonicidad' 'numberOfIntervalPostonica'
-					durpostonica = endingpointpostonica - startingpointpostonica
-					mediopostonica = startingpointpostonica + (durpostonica/2)
-					printline inicio postónica: 'startingpointpostonica' medio postonica: 'mediopostonica' final postónica: 'endingpointpostonica'
+					stressedstotalesfrase = stressedstotalesfrase + 1
+					stressedstotalesfile = stressedstotalesfile + 1 
+
+
+					selectObject: stressedInventory
+					Append row
+					Set numeric value: stressedstotalesfrase, "n", stressedstotalesfrase
+					Set numeric value: stressedstotalesfrase, "nInterval", actualInterval
+
+
+
+					if nucleus_method$ = "manual"
+						if index(labeli$, marca_de_tonica$) != 0
+							Set string value: stressedstotalesfrase, "isNucleus", "yes"
+						else
+							Set string value: stressedstotalesfrase, "isNucleus", "no"
+						endif
+					else
+							Set string value: stressedstotalesfrase, "isNucleus", "no"
+					endif
+
+
+
+
+					if ultimastressed < 1
+						exitScript: "No stress marks found"
+					endif
+				
+					@printData: ""
+					@printData: "Analysing stress syl in interval:" + fixed$(ultimastressed, 0)
+
+					selectObject: myText
+					startingpointstressed = Get start point... 'segmentation_tier' 'actualInterval'
+					endingpointstressed = Get end point... 'segmentation_tier' 'actualInterval'
+					durtonica = endingpointstressed - startingpointstressed
+					midstressed = startingpointstressed + (durtonica/2)
+
+					numberOfIntervalPrestressed = actualInterval - (1)
+					startingpointprestressed = Get start point... 'segmentation_tier' 'numberOfIntervalPrestressed'
+					endingpointprestressed = Get end point... 'segmentation_tier' 'numberOfIntervalPrestressed'
+					durpretonica = endingpointprestressed - startingpointprestressed
+					midprestressed = startingpointprestressed + (durpretonica/2)
+						printline tonica centro: 'midstressed'
+					numberOfIntervalpoststressed = actualInterval + 1
+					startingpointpoststressed = Get start point... 'segmentation_tier' 'numberOfIntervalpoststressed'
+					endingpointpoststressed = Get end point... 'segmentation_tier' 'numberOfIntervalpoststressed'
+					durpoststressed = endingpointpoststressed - startingpointpoststressed
+					mediopoststressed = startingpointpoststressed + (durpoststressed/2)
+					printline inicio postónica: 'startingpointpoststressed' medio poststressed: 'mediopoststressed' final postónica: 'endingpointpoststressed'
+
+
+
+					selectObject: intensity
+					meanInt = Get mean: startingpointstressed, endingpointpoststressed, "energy"
+					if meanInt= undefined
+						meanInt = 0
+					endif
+					
+					selectObject: intTable
+					Append row
+
+				
+
+					Set numeric value: stressedstotalesfile, "interval", actualInterval
+					Set numeric value: stressedstotalesfile, "intensity", meanInt
+					stringInt$ = string$(meanInt)
+					Set string value: stressedstotalesfile, "stringInt", stringInt$
+
+					select PitchTier 'base$'
+					rangeStressed = Get standard deviation (curve): startingpointstressed, endingpointstressed
+
+					selectObject: intTable
+					Set numeric value: stressedstotalesfile, "range", rangeStressed
+					stringRange$ = string$(rangeStressed)
+					Set string value: stressedstotalesfile, "stringRange", stringRange$
+
 
 
 					#obtención de valores pitch
 					select PitchTier 'base$'
-					f01pre = Get value at time... 'startingpointpretonica'
-					f02pre = Get value at time... 'mediopretonica'
-					f03pre = Get value at time... 'endingpointpretonica'
-					if numberOfIntervalPretonica = 1
-						f02pre = Get value at time... 'startingpointtonica'
-						f01pre = Get value at time... 'startingpointtonica'
-						f03pre = Get value at time... 'startingpointtonica'
+					f01pre = Get value at time... 'startingpointprestressed'
+					f02pre = Get value at time... 'midprestressed'
+					f03pre = Get value at time... 'endingpointprestressed'
+					if numberOfIntervalPrestressed = 1
+						f02pre = Get value at time... 'startingpointstressed'
+						f01pre = Get value at time... 'startingpointstressed'
+						f03pre = Get value at time... 'startingpointstressed'
 					endif
-							printline pretonica 'mediopretonica'
+					@printData: "Mid pre-stressed value: " + fixed$(midprestressed,0)
 
-					f01ton = Get value at time... 'startingpointtonica'
-					f02ton = Get value at time... 'mediotonica'
-					f03ton = Get value at time... 'endingpointtonica'
-					f01pos = Get value at time... 'startingpointpostonica'
-					f02pos = Get value at time... 'mediopostonica'
-					f03pos = Get value at time... 'endingpointpostonica'
+					f01ton = Get value at time... 'startingpointstressed'
+					f02ton = Get value at time... 'midstressed'
+					f03ton = Get value at time... 'endingpointstressed'
+					f01pos = Get value at time... 'startingpointpoststressed'
+					f02pos = Get value at time... 'mediopoststressed'
+					f03pos = Get value at time... 'endingpointpoststressed'
 
 					printline F01 'f01pos' F02 'f02pos' F03 'f03pos'
 
 					select Pitch 'base$'
-					f0tonmax = Get maximum: startingpointtonica, endingpointtonica, "Hertz", "Parabolic"
+					f0tonmax = Get maximum: startingpointstressed, endingpointstressed, "Hertz", "Parabolic"
 					if f0tonmax=undefined
-						@undefined: f0tonmax, endingpointtonica
+						@undefined: f0tonmax, endingpointstressed
 						f0tonmax = value
 					endif
-					f0tonmin = Get minimum: startingpointtonica, endingpointtonica, "Hertz", "Parabolic"
+					f0tonmin = Get minimum: startingpointstressed, endingpointstressed, "Hertz", "Parabolic"
 					if f0tonmin=undefined
-						@undefined: f0tonmin, endingpointtonica
+						@undefined: f0tonmin, endingpointstressed
 						f0tonmin = value
 					endif
 
-					f0targetpos = Get maximum: startingpointpostonica, endingpointpostonica, "Hertz", "Parabolic"
+					f0targetpos = Get maximum: startingpointpoststressed, endingpointpoststressed, "Hertz", "Parabolic"
+					timeOfPeakPos = Get time of maximum: startingpointpoststressed, endingpointpoststressed, "Hertz", "Parabolic"
+
 					if f0targetpos= undefined
-						@undefined: f0targetpos, endingpointpostonica
+						@undefined: f0targetpos, endingpointpoststressed
 						f0targetpos = value
+						timeOfPeakPos = time
+
 						if f0targetpos = undefined
 							f0targetpos = minpitch
 						endif
@@ -355,10 +464,10 @@ printline numberOfIntervals 'numberOfIntervals'
 					diftonpos = (12 / log10 (2)) * log10 ('f02pos' / 'f02ton')
 					difton2pos3 = (12 / log10 (2)) * log10 ('f03pos' / 'f02ton')
 					difpremaxton = (12 / log10 (2)) * log10 ('f0tonmax' / 'f02pre')
-					diftonton = (12 / log10 (2)) * log10 ('f03ton' / 'f01ton')
+					diftonMidEnd = (12 / log10 (2)) * log10 ('f03ton' / 'f01ton')
 					diftontargetpos = (12 / log10 (2)) * log10 ('f0targetpos' / 'f0tonmin')
 					diftonmintonmax = (12 / log10 (2)) * log10 ('f0tonmax' / 'f0tonmin')
-			printline En el pretonema difpreton 'difpreton' diftonpos 'diftonpos' difpremaxton 'difpremaxton' diftonton 'diftonton' diftonmintonmax 'diftonmintonmax' diftontargetpos 'diftontargetpos'
+					@printData: "Prenuclear analysis: Differences between pre/str " + fixed$(difpreton,0) + " str/post "+ fixed$(diftonpos,0)
 
 					################	FORMULAS	####################
 
@@ -367,17 +476,20 @@ printline numberOfIntervals 'numberOfIntervals'
 					etiquetatono$= "prenuclear"
 					etiquetatonoprofundo$= "prenuclear"
 
+					@printData: ""
+					@printData: "Prenuclear formulae"
+
 					###############	Tonos a partir de la mediana ##################
 					if abs (difpreton) < 'umbral' and abs (diftontargetpos) < 'umbral' and f02ton < tercio2
 						etiquetatono$ = "L*"
 						etiquetatonoprofundo$ = "L*"
-		printline formula pre L*
+					@printData: "L*"
 					endif
 
 					if abs (difpreton) < 'umbral' and abs (diftontargetpos) < 'umbral' and f02ton >= tercio2
 						etiquetatono$ = "H*"
 						etiquetatonoprofundo$ = "H*"
-		printline formula pre H*
+					@printData: "H*"
 					endif
 
 					#CALCULO DEL TONO EN VEZ DE POR TERCIOS POR DECLINACION
@@ -385,14 +497,14 @@ printline numberOfIntervals 'numberOfIntervals'
 					numeropuntosahora = Get number of points: 'tier_Tones'
 					printline numeropuntosahora 'numeropuntosahora'
 					if numeropuntosahora >=2
-						labeltonicaanterior$ = Get label of point: tier_Tones, numeropuntosahora-1
+						labelstressedprevious$ = Get label of point: tier_Tones, numeropuntosahora-1
 						tpuntoanterior = Get time of point: tier_Tones, numeropuntosahora-1
 							select PitchTier 'base$'
 							f0_puntoanterior = Get value at time: tpuntoanterior
 							select TextGrid 'base$'
-							intervaloptoanterior = Get interval at time: tier_tonicidad, tpuntoanterior
-							iniciointervaloanterior = Get start point: tier_tonicidad, intervaloptoanterior
-							finintervaloanterior = Get end point: tier_tonicidad, intervaloptoanterior
+							intervaloptoanterior = Get interval at time: segmentation_tier, tpuntoanterior
+							iniciointervaloanterior = Get start point: segmentation_tier, intervaloptoanterior
+							finintervaloanterior = Get end point: segmentation_tier, intervaloptoanterior
 							select Pitch 'base$'
 							f0maxtonicaanterior = Get maximum: iniciointervaloanterior, finintervaloanterior, "Hertz", "Parabolic"
 							if f0maxtonicaanterior = undefined
@@ -400,18 +512,23 @@ printline numberOfIntervals 'numberOfIntervals'
 										f0maxtonicaanterior = value
 							endif
 							difconlaanterior = (12 / log10 (2)) * log10 (f0maxtonicaanterior / f0_puntoanterior)
-							printline difconlaanterior 'difconlaanterior'
+							@printData: "Diff from last str. syl peak: " + string$(difconlaanterior)
 
-						if ('difconlaanterior' > 'umbralnegativo') and ((labeltonicaanterior$ = "H*") or (labeltonicaanterior$ = "L*+H") or (labeltonicaanterior$ = "L+H*") or (labeltonicaanterior$ = "(L+H*)+H")or (labeltonicaanterior$ = "L+(H*+H)") or (labeltonicaanterior$ = "L*+(H+H)") or (labeltonicaanterior$ = "(L*+H)+H)") or (labeltonicaanterior$ = "(L+H*)+L)"))
+
+						if ('difconlaanterior' > 'umbralnegativo') and ((labelstressedprevious$ = "H*") or (labelstressedprevious$ = "L*+H") or (labelstressedprevious$ = "L+H*") or (labelstressedprevious$ = "(L+H*)+H")or (labelstressedprevious$ = "L+(H*+H)") or (labelstressedprevious$ = "L*+(H+H)") or (labelstressedprevious$ = "(L*+H)+H)") or (labelstressedprevious$ = "(L+H*)+L)"))
 							pitchaccent$ = "H*"
 							etiquetatono$ = "H*"
 							etiquetatonoprofundo$ = "H*"
 							tonicaH= 1
+							@printData: "H*, lack declination from previous point"
+
 						else
 							pitchaccent$ = "L*"
 							etiquetatono$ = "L*"
 							etiquetatonoprofundo$ = "L*"
 							tonicaH= 0
+							@printData: "L*"
+
 						endif
 					endif
 					printline pitchaccent 'pitchaccent$'
@@ -421,12 +538,12 @@ printline numberOfIntervals 'numberOfIntervals'
 					if difpreton < 'umbralnegativo' and diftonpos < 'umbralnegativo'
 						etiquetatono$ = "des"
 						etiquetatonoprofundo$= "des"
-		printline formula pre des
+							@printData: "L*, has been declination from previous point"
 					endif
 
 
 					#etiqueta muy simple debería mirar si el target está en la postónica
-					if diftonton > umbral
+					if diftonMidEnd > umbral
 						etiquetatono$ = "L+H*"
 						etiquetatonoprofundo$= "L+H*"
 					endif
@@ -452,7 +569,7 @@ printline numberOfIntervals 'numberOfIntervals'
 					endif
 
 					#fórmula para las preguntas del que solo aplica al catalán. Bajada significativa entre incio tónica y final tónica.
-					if lengua = 3 and diftonton < 'umbralnegativo'
+					if lengua = 3 and diftonMidEnd < 'umbralnegativo'
 						etiquetatono$ = "H+L*"
 						etiquetatonoprofundo$= "H+L*"
 		printline formula pre H+L* preg que
@@ -462,9 +579,9 @@ printline numberOfIntervals 'numberOfIntervals'
 					select TextGrid 'base$'
 					numeropuntosahora = Get number of points: 'tier_Tones'
 
-					if abs (difpreton) < umbral and abs (diftonpos) < 'umbral' and (numeropuntosahora >= 1) and (diftonton > umbralnegativo)
-						labeltonicaanterior$ = Get label of point: tier_Tones, numeropuntosahora
-						if (labeltonicaanterior$ = "H*") or (labeltonicaanterior$ = "L*+H") or (labeltonicaanterior$ = "L+H*") or (labeltonicaanterior$ = "(L+H*)+H")or (labeltonicaanterior$ = "L+(H*+H)") or (labeltonicaanterior$ = "L*+(H+H)")or (labeltonicaanterior$ = "(L*+H)+H)")
+					if abs (difpreton) < umbral and abs (diftonpos) < 'umbral' and (numeropuntosahora >= 1) and (diftonMidEnd > umbralnegativo)
+						labelstressedprevious$ = Get label of point: tier_Tones, numeropuntosahora
+						if (labelstressedprevious$ = "H*") or (labelstressedprevious$ = "L*+H") or (labelstressedprevious$ = "L+H*") or (labelstressedprevious$ = "(L+H*)+H")or (labelstressedprevious$ = "L+(H*+H)") or (labelstressedprevious$ = "L*+(H+H)")or (labelstressedprevious$ = "(L*+H)+H)")
 							#ves a buscar el valor de del punto anterior y si del punto anterior al punto de ahora no pasa el umbral negativo etiquetalo como H*
 							select TextGrid 'base$'
 							tpuntoanterior = Get time of point: tier_Tones, numeropuntosahora
@@ -502,7 +619,7 @@ printline numberOfIntervals 'numberOfIntervals'
 
 					# H+L* PUESTO PARA QUE DIGA DESACENTUADO SI VIENE DE OTRO TONO
 					# hay una diferencia en la tónica que pasa el umbral, esa diferencia es negativa, y de la tónica al target de la postónica no pasa el umbral
-					if (diftonmintonmax > 'umbral') and (diftonton < 0) and (abs (diftontargetpos) < 'umbral')
+					if (diftonmintonmax > 'umbral') and (diftonMidEnd < 0) and (abs (diftontargetpos) < 'umbral')
 						etiquetatono$ = "H+L*"
 						etiquetatonoprofundo$ = "H+L*"
 
@@ -511,13 +628,13 @@ printline numberOfIntervals 'numberOfIntervals'
 							numeropuntosahora = Get number of points: 'tier_Tones'
 							printline  numeropuntosahora 'numeropuntosahora'
 							if numeropuntosahora >=1
-								labeltonicaanterior$ = Get label of point: tier_Tones, numeropuntosahora
-								if labeltonicaanterior$ ="L*+H" or labeltonicaanterior$ ="H+(L*+H)"
+								labelstressedprevious$ = Get label of point: tier_Tones, numeropuntosahora
+								if labelstressedprevious$ ="L*+H" or labelstressedprevious$ ="H+(L*+H)"
 									tpuntoanterior = Get time of point: tier_Tones, numeropuntosahora
-									intervaloultimotono = Get interval at time: tier_tonicidad, tpuntoanterior
+									intervaloultimotono = Get interval at time: segmentation_tier, tpuntoanterior
 									intervalotarget = intervaloultimotono + 1
-									inicio_target = Get start point: tier_tonicidad, intervaloultimotono
-									fin_target = Get end point: tier_tonicidad, intervaloultimotono+1
+									inicio_target = Get start point: segmentation_tier, intervaloultimotono
+									fin_target = Get end point: segmentation_tier, intervaloultimotono+1
 									select Pitch 'base$'
 									f0_targetanterior = Get maximum: inicio_target, fin_target, "Hertz", "Parabolic"
 									if f0_targetanterior=undefined
@@ -589,7 +706,7 @@ printline numberOfIntervals 'numberOfIntervals'
 					endif
 
 					#  ETIQUETA CUESTIONABLE subida entre la pretónica y la tónica con el pico en el centro de la postónica
-					if (diftonmintonmax >= 'umbral') and (diftonton >0) and (f01pos >= f02ton) and (f02pos >= f01pos) and (f02pos >= f03pos)
+					if (diftonmintonmax >= 'umbral') and (diftonMidEnd >0) and (f01pos >= f02ton) and (f02pos >= f01pos) and (f02pos >= f03pos)
 						etiquetatono$ = "L+H*+H"
 						printline fórmula prenúcleo 'labeli$' L+H*+H
 						if abs (diftonmintonmax) < abs (diftonpos)
@@ -628,13 +745,13 @@ printline numberOfIntervals 'numberOfIntervals'
 							numeropuntosahora = Get number of points: 'tier_Tones'
 							printline  numeropuntosahora 'numeropuntosahora'
 							if numeropuntosahora >=1
-								labeltonicaanterior$ = Get label of point: tier_Tones, numeropuntosahora
-								if (labeltonicaanterior$ = "L*+H") or (labeltonicaanterior$ ="L+(H*+H)") or (labeltonicaanterior$ ="(L+H*)+H")
+								labelstressedprevious$ = Get label of point: tier_Tones, numeropuntosahora
+								if (labelstressedprevious$ = "L*+H") or (labelstressedprevious$ ="L+(H*+H)") or (labelstressedprevious$ ="(L+H*)+H")
 									tpuntoanterior = Get time of point: tier_Tones, numeropuntosahora
-									intervaloultimotono = Get interval at time: tier_tonicidad, tpuntoanterior
+									intervaloultimotono = Get interval at time: segmentation_tier, tpuntoanterior
 									intervalotarget = intervaloultimotono + 1
-									inicio_target = Get start point: tier_tonicidad, intervaloultimotono
-									fin_target = Get end point: tier_tonicidad, intervaloultimotono+1
+									inicio_target = Get start point: segmentation_tier, intervaloultimotono
+									fin_target = Get end point: segmentation_tier, intervaloultimotono+1
 									select Pitch 'base$'
 									f0_targetanterior = Get maximum: inicio_target, fin_target, "Hertz", "Parabolic"
 									if f0_targetanterior = undefined
@@ -685,9 +802,9 @@ printline numberOfIntervals 'numberOfIntervals'
 
 					##########	ESCRIBE LA ETIQUETA QUE HA SALIDO DE LAS FORMULAS	##################
 					select TextGrid 'base$'
-					Insert point... 'tier_Tones' 'mediotonica' 'etiquetatono$'
+					Insert point... 'tier_Tones' 'midstressed' 'etiquetatono$'
 					if etiquetaje_profundo = 1
-						Insert point... 'tier_profundo' 'mediotonica' 'etiquetatonoprofundo$'
+						Insert point... 'deep_tier' 'midstressed' 'etiquetatonoprofundo$'
 					endif
 
 					##############
@@ -704,42 +821,194 @@ printline numberOfIntervals 'numberOfIntervals'
 
 
 		#####################	ACCIONES PARA LA ULTIMA TÓNICA 	##############
-		#ahora el número de intervalo de la ultima tonica de la frase está almacenada en ultimatonica
-	printline CONFIGURACIÓN NUCLEAR
-		#calcula acento de la última tónica sea cual sea el tipo acentual
-		if ultimatonica < 1
+		#ahora el número de intervalo de la ultima tonica de la frase está almacenada en ultimastressed
+	
+	@printData: "--"
+	@printData: "NUCLEAR CONFIGURATION"
+
+		if ultimastressed < 1
 			pause There are not stressed syllables
 		endif
+
+
+		###
+		# decide where is the nucleus
+		##
+		selectObject: intTable
+		
+		int1 = Get value: stressedstotalesfile, "intensity"
+		if stressedstotalesfile > 2
+			int2 = Get value: 2, "intensity"
+		else
+			int2= 0
+		endif
+
+
+		intFirst= int1
+		intLast = Get value: stressedstotalesfile, "intensity"
+		difInt = intLast-intFirst 
+		if difInt< -5
+			early = 1
+			selectObject: intTable
+			nOfRows = Get number of rows
+			for row to nOfRows
+				value= Get value: row, "intensity"
+				if value = undefined
+					Set numeric value: row, "intensity", 0
+				endif
+			endfor
+			
+			max = Get maximum: "intensity"
+			if max = undefined
+				max = 0
+			endif
+			strMax$ = string$(max)
+			row = Search column: "stringInt", strMax$
+		else 
+			early= 0
+			row = stressedstotalesfile
+		endif
+
+		### nucleus by range
+		maxR = Get maximum: "range"
+		if maxR = undefined
+				maxR = 0
+		endif
+			strMaxR$ = string$(maxR)
+		rowR = Search column: "stringRange", strMaxR$
+
+		if rowR = stressedstotalesfile
+			early = 0
+		else
+			early=1
+		endif
+
+
+
+
+
+		selectObject: nucleusData
+		Append row
+		Set string value: ifile, "file", base$
+		Set numeric value: ifile, "nucleus", row
+		Set numeric value: ifile, "difInt", difInt
+		#by range
+		Set numeric value: ifile, "nucleusRange", rowR
+		Set numeric value: ifile, "range", maxR
+
+
+		if row = stressedstotalesfile
+			Set string value: ifile, "last", "yes"
+		else
+			Set string value: ifile, "last", "no"
+		endif
+
+
+		if rowR = stressedstotalesfile
+			Set string value: ifile, "lastRange", "yes"
+		else
+			Set string value: ifile, "lastRange", "no"
+		endif
+
+		
+		selectObject: stressedInventory
+		nucl= Search column: "isNucleus", "yes"
+
+
+		if nucl <> 0
+			ultimastressed= Get value: nucl, "nInterval"
+			early = 1
+		else 
+			nucl = stressedstotalesfile
+			early= 0
+		endif
+
+
 		select TextGrid 'base$'
-		startingpointlastton = Get start point... 'tier_tonicidad' 'ultimatonica'
-		endingpointlastton = Get end point... 'tier_tonicidad' 'ultimatonica'
-		ultimasilaba = endIntervalIP-1
-		endingpointlastsyl = Get end point... 'tier_tonicidad' 'ultimasilaba'
+		startingpointlastton = Get start point: segmentation_tier, ultimastressed
+		endingpointlastton = Get end point: segmentation_tier, ultimastressed
+		ultimasilaba = endIntervalIP
+		endingpointlastsyl = Get end point: segmentation_tier, ultimasilaba
 		durlastton = endingpointlastton - startingpointlastton
+
+		stressType = ultimasilaba - ultimastressed
+
+
 		mediolastton = startingpointlastton + (durlastton/2)
 		parteslastton=  durlastton/6
 		t4lastton = parteslastton*2
 		t5lastton = parteslastton*4
 
 		# pretónica de la última tonica
-		pretonlastton = ultimatonica - 1
-		startingpointprelastton = Get start point... 'tier_tonicidad' 'pretonlastton'
-		endingpointprelastton = Get end point... 'tier_tonicidad' 'pretonlastton'
+		pretonlastton = ultimastressed - 1
+		startingpointprelastton = Get start point... 'segmentation_tier' 'pretonlastton'
+		endingpointprelastton = Get end point... 'segmentation_tier' 'pretonlastton'
 		durprelastton = endingpointprelastton - startingpointprelastton
 		medioprelastton = startingpointprelastton + (durprelastton/2)
 
 		# postónica de la última tonica
-		postonlastton = ultimatonica + 1
-		startingpointposlastton = Get start point... 'tier_tonicidad' 'postonlastton'
-		endingpointposlastton = Get end point... 'tier_tonicidad' 'postonlastton'
+		postonlastton = ultimastressed + 1
+		startingpointposlastton = Get start point... 'segmentation_tier' 'postonlastton'
+		endingpointposlastton = Get end point... 'segmentation_tier' 'postonlastton'
 		durposlastton = endingpointposlastton - startingpointposlastton
 		medioposlastton = startingpointposlastton + (durposlastton/2)
 		parteslastpos=  durposlastton/6
 		t4lastpos = parteslastpos*2
 		t5lastpos = parteslastpos*4
 
-		#obtencion valores F0 ultima tonica
+
+
+if stressType =0
+			@printData: "Oxytone"
+
+			select TextGrid 'base$'
+			endingpointlastton = startingpointlastton+ durlastton/2
+			durlastton = endingpointlastton-startingpointlastton
+			mediolastton = startingpointlastton + (durlastton/2)
+			parteslastton=  durlastton/6
+			t4lastton = parteslastton*2
+			t5lastton = parteslastton*4
+
+			startingpointposlastton = endingpointlastton
+			endingpointposlastton = Get end point: segmentation_tier, ultimastressed
+			durposlastton = endingpointposlastton - startingpointposlastton
+			medioposlastton = startingpointposlastton + (durposlastton/2)
+			parteslastpos=  durposlastton/6
+			t4lastpos = parteslastpos*2
+			t5lastpos = parteslastpos*4
+		else
+			@printData: "Non-oxytone"
+
+			select TextGrid 'base$'
+			middlelastton = startingpointlastton + (durlastton/2)
+			parteslastton=  durlastton/6
+			t4lastton = parteslastton*2
+			t5lastton = parteslastton*4
+
+			postonlastton = ultimastressed + 1
+			startingpointposlastton = Get start point... 'segmentation_tier' 'postonlastton'
+			endingpointposlastton = Get end point... 'segmentation_tier' 'postonlastton'
+			durposlastton = endingpointposlastton - startingpointposlastton
+			middleposlastton = startingpointposlastton + (durposlastton/2)
+			parteslastpos=  durposlastton/6
+			t4lastpos = parteslastpos*2
+			t5lastpos = parteslastpos*4	
+		endif
+
+
+
+		# compute F0 differences
 		select PitchTier 'base$'
+
+
+		if numberOfIntervalPrestressed = 1
+			startingpointlastton= startingpointlastton+0.05
+			middleprelastton = startingpointlastton
+		elsif numberOfIntervalPrestressed = 2
+			startingpointprelastton = startingpointprelastton+0.05
+		endif
+
+
 
 		f01pre = Get value at time... 'startingpointprelastton'
 		f02pre = Get value at time... 'medioprelastton'
@@ -752,17 +1021,21 @@ printline numberOfIntervals 'numberOfIntervals'
 		f03ton = Get value at time... 'endingpointlastton'
 		f04ton = Get value at time... 't4lastton'
 		f05ton = Get value at time... 't5lastton'
-		printline último tono:
-		printline f0 tonica:  'f01ton' Hz, 'f02ton' Hz, 'f03ton' Hz.
+		
+
+
+		@printData: "Last str syl: start" + fixed$(f01ton, 0) + "Hz. Mid: "+ fixed$(f02ton, 0) + "Hz. End: " +fixed$(f03ton, 0)
+		@printData: "Last str syl: near start" + fixed$(f04ton, 0) + "Hz. Near end: "+ fixed$(f05ton, 0)
+
 
 
 
 		# si no hay pretonica, los valores de la pretonica son los valores de inicio de la tónica
-		if numberOfIntervalPretonica = 1
+		if numberOfIntervalPrestressed = 1
 			f02pre = f01ton
 		endif
 		
-		f0fin = Get value at time... 'endingpointlastsyl'
+		f0fin = Get value at time... 'endingpointlastsyl'-0.05
 
 		f01pos = Get value at time... 'startingpointposlastton'
 		f02pos = Get value at time... 'medioposlastton'
@@ -771,60 +1044,80 @@ printline numberOfIntervals 'numberOfIntervals'
 		f05pos = Get value at time... 't5lastpos'
 
 		#elige valor más alto...
-		f0maxultimatonica = max (f01ton, f02ton,f03ton,f04ton,f05ton)
+		f0maxultimastressed = max (f01ton, f02ton,f03ton,f04ton,f05ton)
 
-		select Pitch 'base$'
+		selectObject: myPitch
 		f0maxton = Get maximum: startingpointlastton, endingpointlastton, "Hertz", "Parabolic"
+		whereMax= Get time of maximum: startingpointlastton, endingpointlastton, "Hertz", "Parabolic"
+
 		if f0maxton= undefined
 			@undefined: f0maxton, endingpointlastton
 			f0maxton = value
+			whereMax = time
 		endif
+
+		@printData: "Last pres syl:" + fixed$(f02pre, 0) + "Last post: "+ fixed$(f02pos, 0)
+
 			printline f02pre: 'f02pre' f02pos: 'f02pos'
 		##### 	calculos semitonos ultima tonica #######
 		difpreton = (12 / log10 (2)) * log10 ('f02ton' / 'f02pre')
-		diftonpos = (12 / log10 (2)) * log10 ('f02pos' / 'f02ton')
-		diftonton = (12 / log10 (2)) * log10 ('f03ton' / 'f02ton')
-		diftonton1 = (12 / log10 (2)) * log10 ('f02ton' / 'f01ton')
-		diftonton2 = (12 / log10 (2)) * log10 ('f03ton' / 'f01ton')
+		diftonpos = (12 / log10 (2)) * log10 ('f02pos' / 'f02ton')	
+		difpospos = (12 / log10 (2)) * log10 ('f03pos' / 'f01pos')
+		diftonMidEnd = (12 / log10 (2)) * log10 ('f03ton' / 'f02ton')
+		diftonStartMid = (12 / log10 (2)) * log10 ('f02ton' / 'f01ton')
+		diftonMidStartMid = (12 / log10 (2)) * log10 ('f02ton' / 'f04ton')
+
+		diftonStartEnd = (12 / log10 (2)) * log10 ('f03ton' / 'f01ton')
 		difprepre = (12 / log10 (2)) * log10 ('f03pre' / 'f01pre')
 		diftonfin = (12 / log10 (2)) * log10 ('f0fin' / 'f02ton')
 		difpremaxton = (12 / log10 (2)) * log10 ('f0maxton' / 'f02pre')
 		diftonmaxton = (12 / log10 (2)) * log10 ('f0maxton' / 'f01ton')
-		printline difpreton 'difpreton'  diftonpos 'diftonpos' diftonton 'diftonton' diftonton2 'diftonton2'
+		difposfin= (12 / log10 (2)) * log10 ('f0fin' / 'f02pos')
 
+
+		@printData: "Differences"
+		@printData: "Dif pre/pre: " + string$(difprepre) 
+		@printData: "Dif pre/str: " + string$(difpreton) + "st. Dif str/pos: " + string$(diftonpos) +" st."
+		@printData: "Dif within stressed syl" 
+		@printData: "Start-End: "+ string$(diftonStartEnd)+ "st. Start-Mid " + fixed$(diftonStartMid,0) +"st. Mid-End: " + string$(diftonMidEnd)+"st."
+
+		
 
 
 		########### FORMULAS ULTIMA TÓNICA NO AGUDA	###########
-
-		etiquetatono$ = "última-tónica-no-aguda"
-		etiquetaprofunda$ = "última-tónica-no-aguda"
-		printline fórmulas última tónica
+		
+		@printData: ""
+		@printData: "Last stressed syl formulae"
+		
 
 		pitchaccent$ = ""
+		etiquetatono$ = "última-tónica-no-aguda"
+		etiquetaprofunda$ = "última-tónica-no-aguda"
 
 
 			#CALCULO DEL TONO EN VEZ DE POR TERCIOS POR DECLINACION
 			select TextGrid 'base$'
-			numeropuntosahora = Get number of points: 'tier_Tones'
-			printline numeropuntosahora 'numeropuntosahora'
-			labeltonicaanterior$ = ""
-			if numeropuntosahora >=2
-				tpuntoanterior = Get time of point: tier_Tones, numeropuntosahora-1
-				labeltonicaanterior$ = Get label of point: tier_Tones, numeropuntosahora-1
-					select PitchTier 'base$'
-					f0_puntoanterior = Get value at time: tpuntoanterior
-					select TextGrid 'base$'
-					intervaloptoanterior = Get interval at time: tier_tonicidad, tpuntoanterior
-					iniciointervaloanterior = Get start point: tier_tonicidad, intervaloptoanterior
-					fintargetanterior = Get end point: tier_tonicidad, intervaloptoanterior+1
-					select Pitch 'base$'
-					f0maxtargetanterior = Get maximum: iniciointervaloanterior, fintargetanterior, "Hertz", "Parabolic"
-					if f0maxtargetanterior = undefined
-						@undefined: f0maxtargetanterior, fintargetanterior
-								f0maxtargetanterior = value
-					endif
-					difconlaanterior = (12 / log10 (2)) * log10 (f01ton / f0maxtargetanterior)
-					printline difconlaanterior 'difconlaanterior'
+			numeropuntosahora = nucl-1
+
+			labelstressedprevious$ = ""
+			if numeropuntosahora >=1
+				tpuntoanterior = Get time of point: tier_Tones, numeropuntosahora
+				labelstressedprevious$ = Get label of point: tier_Tones, numeropuntosahora
+				select PitchTier 'base$'
+				f0_puntoanterior = Get value at time: tpuntoanterior
+				select TextGrid 'base$'
+				intervaloptoanterior = Get interval at time: segmentation_tier, tpuntoanterior
+				iniciointervaloanterior = Get start point: segmentation_tier, intervaloptoanterior
+				fintargetanterior = startingpointprelastton
+
+				select Pitch 'base$'
+				f0maxtargetanterior = Get maximum: iniciointervaloanterior, fintargetanterior, "Hertz", "Parabolic"
+				if f0maxtargetanterior = undefined
+					@undefined: f0maxtargetanterior, fintargetanterior
+							f0maxtargetanterior = value
+				endif
+				difconlaanterior = (12 / log10 (2)) * log10 (f01ton / f0maxtargetanterior)
+				@printData: "Movement since last target " + fixed$(difconlaanterior, 2) + " St"
 
 				if difconlaanterior < umbralnegativo
 					pitchaccent$ = "L*"
@@ -833,7 +1126,7 @@ printline numberOfIntervals 'numberOfIntervals'
 					tonicaH =0
 				endif
 				if ('difconlaanterior' > 'umbralnegativo') 
-					if ((labeltonicaanterior$ = "H*") or (labeltonicaanterior$ = "L*+H") or (labeltonicaanterior$ = "L+H*") or (labeltonicaanterior$ = "(L+H*)+H") or (labeltonicaanterior$ = "L+(H*+H)") or (labeltonicaanterior$ = "L*+(H+H)") or (labeltonicaanterior$ = "(L*+H)+H)") or (labeltonicaanterior$ = "(L+H*)+L)") or (labeltonicaanterior$ = "L+(H*+L)"))
+					if ((labelstressedprevious$ = "H*") or (labelstressedprevious$ = "L*+H") or (labelstressedprevious$ = "L+H*") or (labelstressedprevious$ = "(L+H*)+H") or (labelstressedprevious$ = "L+(H*+H)") or (labelstressedprevious$ = "L*+(H+H)") or (labelstressedprevious$ = "(L*+H)+H)") or (labelstressedprevious$ = "(L+H*)+L)") or (labelstressedprevious$ = "L+(H*+L)"))
 						pitchaccent$ = "H*"
 						etiquetatono$ = "H*"
 						etiquetaprofunda$ = "H*"
@@ -856,7 +1149,7 @@ printline numberOfIntervals 'numberOfIntervals'
 
 			else
 				difconlaanterior = (12 / log10 (2)) * log10 ('f02ton' / 'f02pre')
-				if ('difconlaanterior' < 'umbralnegativo') and ((labeltonicaanterior$ = "H*") or (labeltonicaanterior$ = "L*+H") or (labeltonicaanterior$ = "L+H*") or (labeltonicaanterior$ = "(L+H*)+H")or (labeltonicaanterior$ = "L+(H*+H)") or (labeltonicaanterior$ = "L*+(H+H)") or (labeltonicaanterior$ = "(L*+H)+H)") or (labeltonicaanterior$ = "(L+H*)+L)"))
+				if ('difconlaanterior' < 'umbralnegativo') and ((labelstressedprevious$ = "H*") or (labelstressedprevious$ = "L*+H") or (labelstressedprevious$ = "L+H*") or (labelstressedprevious$ = "(L+H*)+H")or (labelstressedprevious$ = "L+(H*+H)") or (labelstressedprevious$ = "L*+(H+H)") or (labelstressedprevious$ = "(L*+H)+H)") or (labelstressedprevious$ = "(L+H*)+L)"))
 					pitchaccent$ = "L*"
 					etiquetatono$ = "L*"
 					etiquetaprofunda$ = "L*"
@@ -878,20 +1171,7 @@ printline numberOfIntervals 'numberOfIntervals'
 			printline pitchaccent 'pitchaccent$'
 			endif
 
-		# if abs (difpreton) < 'umbral' and f02ton < tercio2
-			# etiquetatono$ = "L*"
-			# etiquetaprofunda$ = "L*"
-			# tonicaH = 0
-			# printline L*
-		# endif
-
-		# if abs (difpreton) < 'umbral' and f02ton >= tercio2
-			# etiquetatono$ = "H*"
-			# etiquetaprofunda$ = "H*"
-			# tonicaH = 1
-			# printline H*
-		# endif
-
+		
 		
 		
 		if diftonpos > umbral and pitchaccent$ = "H*"
@@ -905,14 +1185,14 @@ printline numberOfIntervals 'numberOfIntervals'
 			etiquetatono$ = "L*"
 			etiquetaprofunda$ = "L*"
 			tonicaH = 0
-			printline L*
+				@printData: "L*"
 		endif
 
 		if abs (difpreton) < 'umbral' and pitchaccent$ = "H*"
 			etiquetatono$ = "H*"
 			etiquetaprofunda$ = "H*"
 			tonicaH = 1
-			printline H*
+				@printData: "H*"
 		endif
 
 		# ETIQUETA PROBLEMATICA esto no existe en español (bajada en la pretónica) en teoría así que en profundo queda el pitchaccent
@@ -934,7 +1214,7 @@ printline numberOfIntervals 'numberOfIntervals'
 			endif
 		endif
 
-		if abs (difpreton) < 'umbral' and diftonton < 'umbralnegativo'
+		if abs (difpreton) < 'umbral' and diftonMidEnd < 'umbralnegativo'
 			etiquetatono$ = "H*+L"
 			etiquetaprofunda$ = "H*+L"
 			tonicaH=0
@@ -947,25 +1227,25 @@ printline numberOfIntervals 'numberOfIntervals'
 
 		# H+L* PUESTO PARA QUE DIGA DESACENTUADO SI VIENE DE OTRO TONO
 		#calcula si ha habido declinación entre el último tono y la prétonica del tono actual. Si ha pasado significa que no hay un target alto en la pretónica por tanto, no es H+L*
-		if diftonton2 < 'umbralnegativo'
+		if diftonStartEnd < 'umbralnegativo'
 			etiquetatono$ = "H+L*"
 			etiquetaprofunda$ = "H+L*"
 			tonicaH=0
 			if lengua = 3 or lengua =2
 				select TextGrid 'base$'
-				numeropuntosahora = Get number of points: 'tier_Tones'
+					numeropuntosahora = nucl-1
 				if numeropuntosahora >=1
-					labeltonicaanterior$ = Get label of point: tier_Tones, numeropuntosahora
+					labelstressedprevious$ = Get label of point: tier_Tones, numeropuntosahora
 
 					if numeropuntosahora >1
 						tpuntoanterior = Get time of point: tier_Tones, numeropuntosahora-1
 
-						intervaloultimotono = Get interval at time: tier_tonicidad, tpuntoanterior
+						intervaloultimotono = Get interval at time: segmentation_tier, tpuntoanterior
 						labeltonoanterior$ = Get label of point: tier_Tones, numeropuntosahora-1
 
 						if (labeltonoanterior$ = "L*+H") or (labeltonoanterior$ = "H+(L*+H)") or (labeltonoanterior$ = "(H+L*)+H") or (labeltonoanterior$ = "(L+H*)+H") or (labeltonoanterior$ = "L+(H*+H)")
-							inicio_target = Get start point: tier_tonicidad, intervaloultimotono+1
-							fin_target = Get end point: tier_tonicidad, intervaloultimotono+1
+							inicio_target = Get start point: segmentation_tier, intervaloultimotono+1
+							fin_target = Get end point: segmentation_tier, intervaloultimotono+1
 							select Pitch 'base$'
 							target_anterior = Get maximum: inicio_target, fin_target, "Hertz", "Parabolic"
 							if target_anterior = undefined
@@ -983,7 +1263,7 @@ printline numberOfIntervals 'numberOfIntervals'
 					endif
 
 					if numeropuntosahora <= 1
-						inicio_frase = Get start point: tier_tonicidad, 2
+						inicio_frase = Get start point: segmentation_tier, 2
 						select PitchTier 'base$'
 						target_anterior = Get value at time: inicio_frase
 					endif
@@ -1000,7 +1280,7 @@ printline numberOfIntervals 'numberOfIntervals'
 						printline H+L*
 					endif
 
-					if (numeropuntosahora > 1) and (labeltonicaanterior$ <> "H+L*") and (labeltonicaanterior$ <> "H+(L*+H)") and (difconlaanterior < 'umbralnegativo')
+					if (numeropuntosahora > 1) and (labelstressedprevious$ <> "H+L*") and (labelstressedprevious$ <> "H+(L*+H)") and (difconlaanterior < 'umbralnegativo')
 						etiquetatono$ = "H+L*"
 						etiquetaprofunda$ = "L*"
 						tonicaH=0
@@ -1018,7 +1298,7 @@ printline numberOfIntervals 'numberOfIntervals'
 		# H+L* PUESTO PARA QUE DIGA DESACENTUADO SI VIENE DE OTRO TONO
 		#esta mira si el tono H que hay en la pretónica es la postónica del tono H de un tono anterior y entonces le coloca sólo la L*
 		#FALTA COLOCARLE LA DECLINACION PORQUE SINO DESACENTUARÁ COSAS QUE NO TOCAN
-		if diftonton2 < 'umbralnegativo'
+		if diftonStartEnd < 'umbralnegativo'
 			tonicaH = 0
 			#busca si el intervalo actual -2 es una tónica (eso quiere decir que la pretónica de la tónica actual es la postónica de otro tono y si ese otro tono tiene un pico pospuesto no coloca H a la pretónica del actual)
 				select TextGrid 'base$'
@@ -1026,9 +1306,9 @@ printline numberOfIntervals 'numberOfIntervals'
 				if numeropuntosahora >1
 					#busca el último tono
 					tpuntoanterior = Get time of point: tier_Tones, numeropuntosahora-1
-					intervaloultimotono = Get interval at time: tier_tonicidad, tpuntoanterior
+					intervaloultimotono = Get interval at time: segmentation_tier, tpuntoanterior
 
-					if intervaloultimotono = ultimatonica-2
+					if intervaloultimotono = ultimastressed-2
 						labeltonoanterior$ = Get label of point: tier_Tones, numeropuntosahora-1
 						if (labeltonoanterior$ = "L*+H") and diftonmaxton > 'umbral'
 							etiquetatono$ = "H+L*"
@@ -1044,7 +1324,7 @@ printline numberOfIntervals 'numberOfIntervals'
 
 
 
-		if (difpreton >= 'umbral') or (diftonton2 >= 'umbral') or (diftonmaxton >= umbral)
+		if (difpreton >= 'umbral') or (diftonStartEnd >= 'umbral') or (diftonmaxton >= umbral)
 			etiquetatono$ = "L+H*"
 			etiquetaprofunda$ = "L+H*"
 			tonicaH = 1
@@ -1061,11 +1341,11 @@ printline numberOfIntervals 'numberOfIntervals'
 			endif
 
 			#solo aplica a los L+H* H%
-			if (difpreton>= umbral or (diftonton2>=umbral)) and diftonfin >= umbral
+			if (difpreton>= umbral or (diftonStartEnd>=umbral)) and diftonfin >= umbral
 				# si la subida en la primera mitad de la tónica no pasa el umbral... Y el tono empieza bajo, si no puede ser una suspendida
 				select TextGrid 'base$'
 				numberpoints = Get number of points: tier_Tones
-				if pitchaccent$ = "L*" and ((diftonton1 < umbral) or (diftonton<umbral) or (diftonton2<umbral) or (f01ton > f02ton)) and (numberpoints > 1)
+				if pitchaccent$ = "L*" and ((diftonStartMid < umbral) or (diftonMidEnd<umbral) or (diftonStartEnd<umbral) or (f01ton > f02ton)) and (numberpoints > 1)
 					etiquetatono$ = "L+H*"
 					etiquetaprofunda$ = "L*"
 					printline L+H*--> L*
@@ -1092,7 +1372,7 @@ printline numberOfIntervals 'numberOfIntervals'
 		#si esta subida se cumple pero lo anterior es un plateau alto
 		#COSAS RARAS PARA DOS ALINEACIONES DE TONO Y PARA LAS ¡H QUE SON ¡ PORQUE SON MÁS ALTAS QUE UNA H ANTERIOR
 		# las de como si no pasan el umblral se quedan sobre 1.2St
-		if 	(difpreton>= 'umbral') and ((diftonton < 'umbralnegativo') or (diftonpos < 'umbralnegativo')) and (abs (difpreton) < abs (diftonpos))
+		if 	(difpreton>= 'umbral') and ((diftonMidEnd < 'umbralnegativo') or (diftonpos < 'umbralnegativo')) and (abs (difpreton) < abs (diftonpos))
 			etiquetatono$ = "(L+H*)+L"
 			etiquetaprofunda$ = "H*+L"
 			printline H*+L
@@ -1113,14 +1393,14 @@ printline numberOfIntervals 'numberOfIntervals'
 			numeropuntosahora = Get number of points: 'tier_Tones'
 			printline numeropuntosahora 'numeropuntosahora'
 			if numeropuntosahora >=2
-				labeltonicaanterior$ = Get label of point: tier_Tones, numeropuntosahora-1
+				labelstressedprevious$ = Get label of point: tier_Tones, numeropuntosahora-1
 				tpuntoanterior = Get time of point: tier_Tones, numeropuntosahora-1
 					select PitchTier 'base$'
 					f0_puntoanterior = Get value at time: tpuntoanterior
 					difconlaanterior = (12 / log10 (2)) * log10 ('f01pre' / 'f0_puntoanterior')
 					printline difconlaanterior 'difconlaanterior'
 
-				if  lengua = 2 and ('difconlaanterior' > 'umbralnegativo') and ((labeltonicaanterior$ = "H*") or (labeltonicaanterior$ = "L*+H") or (labeltonicaanterior$ = "L+H*") or (labeltonicaanterior$ = "(L+H*)+H")or (labeltonicaanterior$ = "L+(H*+H)") or (labeltonicaanterior$ = "L*+(H+H)")or (labeltonicaanterior$ = "(L*+H)+H)") or (labeltonicaanterior$ = "(L+H*)+L)"))
+				if  lengua = 2 and ('difconlaanterior' > 'umbralnegativo') and ((labelstressedprevious$ = "H*") or (labelstressedprevious$ = "L*+H") or (labelstressedprevious$ = "L+H*") or (labelstressedprevious$ = "(L+H*)+H")or (labelstressedprevious$ = "L+(H*+H)") or (labelstressedprevious$ = "L*+(H+H)")or (labelstressedprevious$ = "(L*+H)+H)") or (labelstressedprevious$ = "(L+H*)+L)"))
 					etiquetatono$ = "\!dH*"
 					etiquetaprofunda$= "\!dH*"
 					printline ¡H* (como si Sevilla, preg Canarias etc.)
@@ -1144,17 +1424,20 @@ printline numberOfIntervals 'numberOfIntervals'
 
 		######## escribe etiqueta de la última tónica ##########
 		select TextGrid 'base$'
-		numberOfPoints = Get number of points... 'tier_Tones'
+		numberOfPoints = Get number of points: tier_Tones
 		if numberOfPoints < 1
-			exit No hay ninguna tónica analizada
-		endif
-		Remove point... 'tier_Tones' 'numberOfPoints'
-		Insert point... 'tier_Tones' 'mediolastton' 'etiquetatono$'
-		if etiquetaje_profundo = 1
-			Remove point... 'tier_profundo' 'numberOfPoints'
-			Insert point... 'tier_profundo' 'mediolastton' 'etiquetaprofunda$'
+			exitScript: "No stressed syl anal."
 		endif
 
+		#each new IP adds a boundary tone that is not counted in the nucl but it is a point
+		# so we add the a point for each IP and we substract the current IP because we have not put the BT yet
+		Remove point: tier_Tones, nucl + iIP -1
+		Insert point... 'tier_Tones' 'middlelastton' 'labelTone$'
+		
+		if etiquetaje_profundo = 1
+			Remove point: deep_tier, nucl + iIP - 1
+			Insert point: deep_tier, middlelastton, etiquetaprofunda$
+		endif
 
 		#######################			TONOS JUNTURA			#######################
 
@@ -1164,11 +1447,11 @@ printline numberOfIntervals 'numberOfIntervals'
 
 
 		select TextGrid 'base$'
-		endingpointlastsyl = Get end point... 'tier_tonicidad' 'ultimasilaba'
-		tipoacentual = ultimasilaba - ultimatonica
+		endingpointlastsyl = Get end point... 'segmentation_tier' 'ultimasilaba'
+		stressType = ultimasilaba - ultimastressed
 		#dice si es aguda
-		if tipoacentual = 0
-		printline tipoacentual 'tipoacentual'
+		if stressType = 0
+			@printData: "Stress type oxytone, applying oxytone formulae"
 
 			select TextGrid 'base$'
 			endpointcola = endingpointlastsyl
@@ -1190,15 +1473,29 @@ printline numberOfIntervals 'numberOfIntervals'
 			f06cola = Get value at time... 't6cola'
 			f08cola = Get value at time... 't8cola'
 			f09cola = Get value at time... 't9cola'
-			f012cola = Get value at time... 't12cola'
+			f012cola = Get value at time... 't12cola'-0.05
 
 
-
+			
 
 
 
 			select TextGrid 'base$'
-			pointultimatonica = Get number of points... 'tier_Tones'
+			pointultimastressed = Get number of points... 'tier_Tones'
+
+
+			select Pitch 'base$'
+			f0maxprimeramitaddetail = Get maximum: f03tail, f06tail, "Hertz", "Parabolic"
+			if f0maxprimeramitaddetail = undefined
+				f0maxprimeramitaddetail = f06tail
+			endif
+
+			f0minprimeramitaddetail = Get minimum: f03tail, f06tail, "Hertz", "Parabolic"
+			if f0minprimeramitaddetail = undefined
+				f0minprimeramitaddetail = f06tail
+			endif
+
+
 
 			##### Formulas para calcular tonos de frontera monotonales
 			dif126 = (12 / log10 (2)) * log10 ('f012cola' / 'f06cola')
@@ -1207,13 +1504,13 @@ printline numberOfIntervals 'numberOfIntervals'
 			dif96 = (12 / log10 (2)) * log10 ('f09cola' / 'f06cola')
 			dif129 = (12 / log10 (2)) * log10 ('f012cola' / 'f09cola')
 			dif63 = (12 / log10 (2)) * log10 ('f06cola' / 'f03cola')
-			dif12max = (12 / log10 (2)) * log10 ('f012cola' / 'f0maxultimatonica')
+			dif12max = (12 / log10 (2)) * log10 ('f012cola' / 'f0maxultimastressed')
 			
 
 			#pone un punto vacío para tener que borrar los dos últimos puntos en todos los casos
 			Insert point... 'tier_Tones' 't12cola' 'etiquetafinal$'
 			if etiquetaje_profundo = 1
-				Insert point... 'tier_profundo' 't12cola' 'etiquetafinalprofunda$'
+				Insert point... 'deep_tier' 't12cola' 'etiquetafinalprofunda$'
 			endif
 			pointfinal = Get number of points... 'tier_Tones'
 
@@ -1228,8 +1525,8 @@ printline numberOfIntervals 'numberOfIntervals'
 				Remove point... 'tier_Tones' 'pointfinal'
 				Insert point... 'tier_Tones' 't12cola' 'etiquetafinal$'
 				if etiquetaje_profundo = 1
-					Remove point... 'tier_profundo' 'pointfinal'
-					Insert point... 'tier_profundo' 't12cola' 'etiquetafinalprofunda$'
+					Remove point... 'deep_tier' 'pointfinal'
+					Insert point... 'deep_tier' 't12cola' 'etiquetafinalprofunda$'
 				endif
 				printline etiqueta final L%
 			endif
@@ -1240,8 +1537,8 @@ printline numberOfIntervals 'numberOfIntervals'
 				Remove point... 'tier_Tones' 'pointfinal'
 				Insert point... 'tier_Tones' 't12cola' 'etiquetafinal$'
 				if etiquetaje_profundo = 1
-					Remove point... 'tier_profundo' 'pointfinal'
-					Insert point... 'tier_profundo' 't12cola' 'etiquetafinalprofunda$'
+					Remove point... 'deep_tier' 'pointfinal'
+					Insert point... 'deep_tier' 't12cola' 'etiquetafinalprofunda$'
 				endif
 				printline etiqueta final H%
 			endif
@@ -1254,8 +1551,8 @@ printline numberOfIntervals 'numberOfIntervals'
 				Remove point... 'tier_Tones' 'pointfinal'
 				Insert point... 'tier_Tones' 't12cola' 'etiquetafinal$'
 				if etiquetaje_profundo = 1
-					Remove point... 'tier_profundo' 'pointfinal'
-					Insert point... 'tier_profundo' 't12cola' 'etiquetafinalprofunda$'
+					Remove point... 'deep_tier' 'pointfinal'
+					Insert point... 'deep_tier' 't12cola' 'etiquetafinalprofunda$'
 				endif
 				printline etiqueta final !H%
 			endif
@@ -1269,8 +1566,8 @@ printline numberOfIntervals 'numberOfIntervals'
 				Remove point... 'tier_Tones' 'pointfinal'
 				Insert point... 'tier_Tones' 't12cola' 'etiquetafinal$'
 				if etiquetaje_profundo = 1
-					Remove point... 'tier_profundo' 'pointfinal'
-					Insert point... 'tier_profundo' 't12cola' 'etiquetafinalprofunda$'
+					Remove point... 'deep_tier' 'pointfinal'
+					Insert point... 'deep_tier' 't12cola' 'etiquetafinalprofunda$'
 				endif
 				printline etiqueta final H%
 			endif
@@ -1285,8 +1582,8 @@ printline numberOfIntervals 'numberOfIntervals'
 				Remove point... 'tier_Tones' 'pointfinal'
 				Insert point... 'tier_Tones' 't12cola' 'etiquetafinal$'
 				if etiquetaje_profundo = 1
-					Remove point... 'tier_profundo' 'pointfinal'
-					Insert point... 'tier_profundo' 't12cola' 'etiquetafinalprofunda$'
+					Remove point... 'deep_tier' 'pointfinal'
+					Insert point... 'deep_tier' 't12cola' 'etiquetafinalprofunda$'
 				endif
 			endif
 
@@ -1296,8 +1593,8 @@ printline numberOfIntervals 'numberOfIntervals'
 				Remove point... 'tier_Tones' 'pointfinal'
 				Insert point... 'tier_Tones' 't12cola' 'etiquetafinal$'
 				if etiquetaje_profundo = 1
-					Remove point... 'tier_profundo' 'pointfinal'
-					Insert point... 'tier_profundo' 't12cola' 'etiquetafinalprofunda$'
+					Remove point... 'deep_tier' 'pointfinal'
+					Insert point... 'deep_tier' 't12cola' 'etiquetafinalprofunda$'
 				endif
 				printline etiqueta final !H%
 			endif
@@ -1308,8 +1605,8 @@ printline numberOfIntervals 'numberOfIntervals'
 				Remove point... 'tier_Tones' 'pointfinal'
 				Insert point... 'tier_Tones' 't12cola' 'etiquetafinal$'
 				if etiquetaje_profundo = 1
-					Remove point... 'tier_profundo' 'pointfinal'
-					Insert point... 'tier_profundo' 't12cola' 'etiquetafinalprofunda$'
+					Remove point... 'deep_tier' 'pointfinal'
+					Insert point... 'deep_tier' 't12cola' 'etiquetafinalprofunda$'
 				endif
 				printline etiqueta final !H%
 			endif
@@ -1326,14 +1623,14 @@ printline numberOfIntervals 'numberOfIntervals'
 			numeropuntosahora = Get number of points: 'tier_Tones'
 			printline numeropuntosahora 'numeropuntosahora'
 			if numeropuntosahora >=3
-				labeltonicaanterior$ = Get label of point: tier_Tones, numeropuntosahora-1
+				labelstressedprevious$ = Get label of point: tier_Tones, numeropuntosahora-1
 				tpuntoanterior = Get time of point: tier_Tones, numeropuntosahora-1
 					select PitchTier 'base$'
 					f0_puntoanterior = Get value at time: tpuntoanterior
 					select TextGrid 'base$'
-					intervaloptoanterior = Get interval at time: tier_tonicidad, tpuntoanterior
-					iniciointervaloanterior = Get start point: tier_tonicidad, intervaloptoanterior
-					fintargetanterior = Get end point: tier_tonicidad, intervaloptoanterior+1
+					intervaloptoanterior = Get interval at time: segmentation_tier, tpuntoanterior
+					iniciointervaloanterior = Get start point: segmentation_tier, intervaloptoanterior
+					fintargetanterior = Get end point: segmentation_tier, intervaloptoanterior+1
 					select Pitch 'base$'
 					f0maxtonicaanterior = Get maximum: iniciointervaloanterior, fintargetanterior, "Hertz", "Parabolic"
 					if f0maxtonicaanterior = undefined
@@ -1343,7 +1640,7 @@ printline numberOfIntervals 'numberOfIntervals'
 					difconlaanterior = (12 / log10 (2)) * log10 (f01ton / f0maxtonicaanterior)
 					printline difconlaanterior 'difconlaanterior'
 
-				if ('difconlaanterior' > 'umbralnegativo') and ((labeltonicaanterior$ = "H*") or (labeltonicaanterior$ = "L*+H") or (labeltonicaanterior$ = "L+H*") or (labeltonicaanterior$ = "(L+H*)+H")or (labeltonicaanterior$ = "L+(H*+H)") or (labeltonicaanterior$ = "L*+(H+H)") or (labeltonicaanterior$ = "(L*+H)+H)") or (labeltonicaanterior$ = "(L+H*)+L)"))
+				if ('difconlaanterior' > 'umbralnegativo') and ((labelstressedprevious$ = "H*") or (labelstressedprevious$ = "L*+H") or (labelstressedprevious$ = "L+H*") or (labelstressedprevious$ = "(L+H*)+H")or (labelstressedprevious$ = "L+(H*+H)") or (labelstressedprevious$ = "L*+(H+H)") or (labelstressedprevious$ = "(L*+H)+H)") or (labelstressedprevious$ = "(L+H*)+L)"))
 					pitchaccent$ = "H*"
 				else
 					pitchaccent$ = "L*"
@@ -1352,7 +1649,7 @@ printline numberOfIntervals 'numberOfIntervals'
 			else
 				difconlaanterior = (12 / log10 (2)) * log10 ('f02ton' / 'f02pre')
 
-				if ('difconlaanterior' < 'umbralnegativo') and ((labeltonicaanterior$ = "H*") or (labeltonicaanterior$ = "L*+H") or (labeltonicaanterior$ = "L+H*") or (labeltonicaanterior$ = "(L+H*)+H")or (labeltonicaanterior$ = "L+(H*+H)") or (labeltonicaanterior$ = "L*+(H+H)") or (labeltonicaanterior$ = "(L*+H)+H)") or (labeltonicaanterior$ = "(L+H*)+L)"))
+				if ('difconlaanterior' < 'umbralnegativo') and ((labelstressedprevious$ = "H*") or (labelstressedprevious$ = "L*+H") or (labelstressedprevious$ = "L+H*") or (labelstressedprevious$ = "(L+H*)+H")or (labelstressedprevious$ = "L+(H*+H)") or (labelstressedprevious$ = "L*+(H+H)") or (labelstressedprevious$ = "(L*+H)+H)") or (labelstressedprevious$ = "(L+H*)+L)"))
 					pitchaccent$ = "L*"
 				else
 
@@ -1684,7 +1981,7 @@ printline numberOfIntervals 'numberOfIntervals'
 		endif
 
 		####	condicion si el tonema no es agudo	###################
-		if tipoacentual > 0
+		if stressType > 0
 			select TextGrid 'base$'
 			endpointcola = endingpointlastsyl
 			startpointcola = endingpointlastton
@@ -1725,7 +2022,7 @@ printline numberOfIntervals 'numberOfIntervals'
 			dif23 = (12 / log10 (2)) * log10 ('f03cola' / 'f02cola')
 			dif46 = (12 / log10 (2)) * log10 ('f06cola' / 'f04cola')
 			#para el mid
-			dif6max = (12 / log10 (2)) * log10 ('f06cola' / 'f0maxultimatonica')
+			dif6max = (12 / log10 (2)) * log10 ('f06cola' / 'f0maxultimastressed')
 			dif0max3 = (12 / log10 (2)) * log10 ('f0maxprimeramitaddecola' / 'f00cola')
 			dif0min3 = (12 / log10 (2)) * log10 ('f0minprimeramitaddecola' / 'f00cola')
 			dif6min3 = (12 / log10 (2)) * log10 ('f06cola' / 'f0minprimeramitaddecola')
@@ -1742,8 +2039,8 @@ printline numberOfIntervals 'numberOfIntervals'
 				etiquetafinal$ = "L\% "
 				etiquetafinalprofunda$ = "L\% "
 				select TextGrid 'base$'
-				labeltonicaanterior$ = Get label of point: tier_Tones, numeropuntosahora
-				if labeltonicaanterior$ = "(H+L*)+H" or labeltonicaanterior$ = "H+(L*+H)"
+				labelstressedprevious$ = Get label of point: tier_Tones, numeropuntosahora
+				if labelstressedprevious$ = "(H+L*)+H" or labelstressedprevious$ = "H+(L*+H)"
 					etiquetafinal$ = "HL\% "
 					etiquetafinalprofunda$ = "HL\% "
 				endif
@@ -1759,8 +2056,8 @@ printline numberOfIntervals 'numberOfIntervals'
 				etiquetafinal$ = "!H\% "
 				etiquetafinalprofunda$ = "!H\% "
 				select TextGrid 'base$'
-				labeltonicaanterior$ = Get label of point: tier_Tones, numeropuntosahora
-				if labeltonicaanterior$ = "(H+L*)+H" or labeltonicaanterior$ = "H+(L*+H)"
+				labelstressedprevious$ = Get label of point: tier_Tones, numeropuntosahora
+				if labelstressedprevious$ = "(H+L*)+H" or labelstressedprevious$ = "H+(L*+H)"
 					etiquetafinal$ = "H!H\% "
 					etiquetafinalprofunda$ = "H!H\% "
 				endif
@@ -1794,7 +2091,7 @@ printline numberOfIntervals 'numberOfIntervals'
 
 			# bitonales después de L
 
-			# subida en la 1postonica y bajada en la segunda
+			# subida en la 1poststressed y bajada en la segunda
 			# en la postónica hay una subida (la diferencia es positiva), del inicio al máximo de la cola pasa el umbral. Y el final pasa el umbral negativo.
 			#debería calcularla con el maximo de la cola y no el máximo de la tónica, así funcionaría también en los H+L* 
 			if tonicaH = 0 and dif03 > 0 and dif0max3 >= 'umbral' and dif36 < 'umbralnegativo'
@@ -1891,7 +2188,7 @@ printline numberOfIntervals 'numberOfIntervals'
 			select TextGrid 'base$'
 			Insert point... 'tier_Tones' 'endingpointlastsyl' 'etiquetafinal$'
 			if etiquetaje_profundo = 1
-				Insert point... 'tier_profundo' 'endpointcola' 'etiquetafinalprofunda$'
+				Insert point... 'deep_tier' 'endpointcola' 'etiquetafinalprofunda$'
 			endif
 
 			#acaba condicion de agudas o el resto
@@ -1907,13 +2204,13 @@ printline numberOfIntervals 'numberOfIntervals'
 	if bI = 1
 		etiquetafinal$ = " \O| "
 		select TextGrid 'base$'
-		numberOfPoints = Get number of points... tier_BI
+		numberOfPoints = Get number of points: tier_BI
 		
 		for i to numberOfPoints
-			labeli = Get label of point... tier_BI i
-			if labeli = 3
-				timePoint = Get time of point... tier_BI i
-				posbreak = Get interval at time... tier_tonicidad timePoint
+			labeli$ = Get label of point: tier_BI, i
+			if labeli$ = "3"
+				timePoint = Get time of point: tier_BI, i
+				posbreak = Get interval at time: segmentation_tier, timePoint
 				prebreak = posbreak - 1
 				if posbreak > 4
 					preprebreak = posbreak - 2
@@ -1928,10 +2225,10 @@ printline numberOfIntervals 'numberOfIntervals'
 					prepreprebreak = posbreak - 1
 				endif
 
-				startingtimeposbreak = Get start point... tier_tonicidad 'posbreak'
-				endingtimeposbreak = Get end point... 'tier_tonicidad' 'posbreak'
-				startingtimeprebreak = Get start point... tier_tonicidad 'prebreak'
-				endingtimeprebreak = Get end point... 'tier_tonicidad' 'prebreak'
+				startingtimeposbreak = Get start point... segmentation_tier 'posbreak'
+				endingtimeposbreak = Get end point... 'segmentation_tier' 'posbreak'
+				startingtimeprebreak = Get start point... segmentation_tier 'prebreak'
+				endingtimeprebreak = Get end point... 'segmentation_tier' 'prebreak'
 
 				select Pitch 'base$'
 				f01posbreak = Get value at time: startingtimeposbreak, "Hertz", "Linear"
@@ -1958,22 +2255,22 @@ printline numberOfIntervals 'numberOfIntervals'
 
 				#comprobación lugar de tónica
 				select TextGrid 'base$'
-				label$ = Get label of interval... 'tier_tonicidad' 'prebreak'
+				label$ = Get label of interval... 'segmentation_tier' 'prebreak'
 				for letra from 1 to numberOfLetras
 					labeltext$[letra] = mid$ ("'label$'", letra)
 				endfor
 				#si es aguda
 				if labeltext$[1] = marca_de_tonica$
 					tonica = prebreak
-					startingtimetonica = Get start point... 'tier_tonicidad' 'tonica'
-					endingtimetonica = Get end point... 'tier_tonicidad' 'tonica'
+					startingtimetonica = Get start point... 'segmentation_tier' 'tonica'
+					endingtimetonica = Get end point... 'segmentation_tier' 'tonica'
 					durtonica = endingtimetonica - startingtimetonica
-					mediotonica = startingtimetonica + (durtonica/2)
+					midstressed = startingtimetonica + (durtonica/2)
 
 					select PitchTier 'base$'
 
 					f01tonica = Get value at time... 'startingtimetonica'
- 					f02tonica = Get value at time... 'mediotonica'
+ 					f02tonica = Get value at time... 'midstressed'
 					f03tonica = Get value at time... 'endingtimetonica'
 					diftonbreak = (12 / log10 (2)) * log10 ('f03tonica' / 'f01tonica')
 
@@ -1985,7 +2282,7 @@ printline numberOfIntervals 'numberOfIntervals'
 
 				#comprobación lugar de llana
 				select TextGrid 'base$'
-				label$ = Get label of interval: tier_tonicidad, preprebreak
+				label$ = Get label of interval: segmentation_tier, preprebreak
 
 				for letra from 1 to numberOfLetras
 					labeltext$[letra] = mid$ ("'label$'", letra)
@@ -1993,15 +2290,15 @@ printline numberOfIntervals 'numberOfIntervals'
 				#si es llana
 				if labeltext$[1] = marca_de_tonica$
 					tonica = preprebreak
-					startingtimetonica = Get start point... 'tier_tonicidad' 'tonica'
-					endingtimetonica = Get end point... 'tier_tonicidad' 'tonica'
+					startingtimetonica = Get start point... 'segmentation_tier' 'tonica'
+					endingtimetonica = Get end point... 'segmentation_tier' 'tonica'
 					durtonica = endingtimetonica - startingtimetonica
-					mediotonica = startingtimetonica + (durtonica/2)
+					midstressed = startingtimetonica + (durtonica/2)
 
 					select PitchTier 'base$'
 
 					f01tonica = Get value at time... 'startingtimetonica'
- 					f02tonica = Get value at time... 'mediotonica'
+ 					f02tonica = Get value at time... 'midstressed'
 					f03tonica = Get value at time... 'endingtimetonica'
 
 					diftonbreak = (12 / log10 (2)) * log10 ('f01posbreak' / 'f02tonica')
@@ -2015,44 +2312,44 @@ printline numberOfIntervals 'numberOfIntervals'
 
 				#comprobación lugar de esdrújula
 				select TextGrid 'base$'
-				label$ = Get label of interval... 'tier_tonicidad' 'prepreprebreak'
+				label$ = Get label of interval... 'segmentation_tier' 'prepreprebreak'
 				for letra from 1 to numberOfLetras
 					labeltext$[letra] = mid$ ("'label$'", letra)
 				endfor
 				#si es esdrujula
 				if labeltext$[1] = marca_de_tonica$
 					tonica = prepreprebreak
-					postonica = tonica + 1
-					pospostonica = tonica + 2
-					startingtimetonica = Get start point... 'tier_tonicidad' 'tonica'
-					endingtimetonica = Get end point... 'tier_tonicidad' 'tonica'
+					poststressed = tonica + 1
+					pospoststressed = tonica + 2
+					startingtimetonica = Get start point... 'segmentation_tier' 'tonica'
+					endingtimetonica = Get end point... 'segmentation_tier' 'tonica'
 					durtonica = endingtimetonica - startingtimetonica
-					mediotonica = startingtimetonica + (durtonica/2)
+					midstressed = startingtimetonica + (durtonica/2)
 
-					startingtimepostonica = Get start point... 'tier_tonicidad' 'postonica'
-					endingtimepostonica = Get end point... 'tier_tonicidad' 'postonica'
-					durpostonica = endingtimepostonica - startingtimepostonica
-					mediopostonica = startingtimepostonica + (durpostonica/2)
+					startingtimepoststressed = Get start point... 'segmentation_tier' 'poststressed'
+					endingtimepoststressed = Get end point... 'segmentation_tier' 'poststressed'
+					durpoststressed = endingtimepoststressed - startingtimepoststressed
+					mediopoststressed = startingtimepoststressed + (durpoststressed/2)
 
-					startingtimepospostonica = Get start point... 'tier_tonicidad' 'pospostonica'
-					endingtimepospostonica = Get end point... 'tier_tonicidad' 'pospostonica'
-					durpospostonica = endingtimepospostonica - startingtimepospostonica
-					mediopospostonica = startingtimepospostonica + (durpospostonica/2)
+					startingtimepospoststressed = Get start point... 'segmentation_tier' 'pospoststressed'
+					endingtimepospoststressed = Get end point... 'segmentation_tier' 'pospoststressed'
+					durpospoststressed = endingtimepospoststressed - startingtimepospoststressed
+					mediopospoststressed = startingtimepospoststressed + (durpospoststressed/2)
 
 
 
 					select PitchTier 'base$'
 					f01tonica = Get value at time... 'startingtimetonica'
- 					f02tonica = Get value at time... 'mediotonica'
+ 					f02tonica = Get value at time... 'midstressed'
 					f03tonica = Get value at time... 'endingtimetonica'
 
-					f02postonica = Get value at time... 'mediopostonica'
-					f02pospostonica = Get value at time... 'mediopospostonica'
-					f03postonica = Get value at time... 'endingtimepostonica'
+					f02poststressed = Get value at time... 'mediopoststressed'
+					f02pospoststressed = Get value at time... 'mediopospoststressed'
+					f03poststressed = Get value at time... 'endingtimepoststressed'
 
-					diftonbreak = (12 / log10 (2)) * log10 ('f02pospostonica' / 'f02tonica')
+					diftonbreak = (12 / log10 (2)) * log10 ('f02pospoststressed' / 'f02tonica')
 
-					if diftonbreak >= 'umbral' and f02pospostonica > f02postonica and f02pospostonica > f03postonica and f01posbreak > f03posbreak
+					if diftonbreak >= 'umbral' and f02pospoststressed > f02poststressed and f02pospoststressed > f03poststressed and f01posbreak > f03posbreak
 						etiquetafinal$ = "H-"
 					endif
 
@@ -2060,7 +2357,7 @@ printline numberOfIntervals 'numberOfIntervals'
 
 				select TextGrid 'base$'
 				Insert point... 'tier_Tones' 'timePoint' 'etiquetafinal$'
-				Insert point... 'tier_profundo' 'timePoint' 'etiquetafinal$'
+				Insert point... 'deep_tier' 'timePoint' 'etiquetafinal$'
 
 			endif
 
@@ -2235,7 +2532,7 @@ if etiquetaje_normalizado = 1
 endif
 
 
-################# borra el etiquetaje fonético en caso de que no se quiera y el nomalizado
+################# borra el etiquetaje fonético en caso de que no se quiera y el normalizado
 
 	if etiquetaje_superficial = 0
 		select textGrid 'base$'
@@ -2259,7 +2556,7 @@ endif
 			itier = itier + 1
 		until tiername$ = name$ or itier > numberOfTiers
 		if tiername$ = "Tones II"
-            tier_profundo = itier
+            deep_tier = itier
 		endif
 		Remove tier: itier
 	endif
@@ -2272,9 +2569,6 @@ endif
 		pause ¿Quieres corregir?
 	endif
 	select TextGrid 'base$'
-	#if marca_de_tonica$ = marcatonicacompleja$
-	#	do ("Replace interval text...", tier_tonicidad, i, numberOfIntervals, "ˈ", "\'1 ", "Literals")
-	#endif
 
 	Save as text file: folder$ + "/"+ base$ + ".TextGrid"
 
@@ -2458,22 +2752,22 @@ Remove
 procedure ponetiqueta ()
 	select TextGrid 'base$'
 		Remove point... 'tier_Tones' 'pointfinal'
-		Remove point... 'tier_Tones' 'pointultimatonica'
+		Remove point... 'tier_Tones' 'pointultimastressed'
 
 		Insert point... 'tier_Tones' 't3cola' 'etiquetatono$'
 		Insert point... 'tier_Tones' 'endpointcola' 'etiquetafinal$'
 
 	if etiquetaje_profundo =1
-		Remove point... 'tier_profundo' 'pointfinal'
-		Remove point... 'tier_profundo' 'pointultimatonica'
-		Insert point... 'tier_profundo' 't3cola' 'etiquetatonoprofundo$'
-		Insert point... 'tier_profundo' 'endpointcola' 'etiquetafinalprofunda$'
+		Remove point... 'deep_tier' 'pointfinal'
+		Remove point... 'deep_tier' 'pointultimastressed'
+		Insert point... 'deep_tier' 't3cola' 'etiquetatonoprofundo$'
+		Insert point... 'deep_tier' 'endpointcola' 'etiquetafinalprofunda$'
 	endif
 endproc
 
 procedure undefined: value, time
-total_duration= Get total duration
-timeprimitivo = time
+	total_duration= Get total duration
+	timeprimitivo = time
 	while value = undefined and time <total_duration
 		time= time+0.001
 		value = Get value at time: time, "Hertz", "Linear"
@@ -2487,3 +2781,11 @@ timeprimitivo = time
 		endwhile
 	endif
 endproc
+
+
+procedure printData: data$
+	if verbose = 1
+		appendInfoLine: data$
+	endif
+endproc
+
