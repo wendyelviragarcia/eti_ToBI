@@ -1,0 +1,301 @@
+File type = "ooTextFile"
+Object class = "TextGrid"
+
+xmin = 0 
+xmax = 5.669297052154195 
+tiers? <exists> 
+size = 4 
+item []: 
+    item [1]:
+        class = "IntervalTier" 
+        name = "syl" 
+        xmin = 0 
+        xmax = 5.669297052154195 
+        intervals: size = 28 
+        intervals [1]:
+            xmin = 0 
+            xmax = 0.038855304148047 
+            text = "" 
+        intervals [2]:
+            xmin = 0.038855304148047 
+            xmax = 0.19071161008146312 
+            text = "ˈma" 
+        intervals [3]:
+            xmin = 0.19071161008146312 
+            xmax = 0.4026485260770972 
+            text = "ɾi" 
+        intervals [4]:
+            xmin = 0.4026485260770972 
+            xmax = 0.5146485260770972 
+            text = "" 
+        intervals [5]:
+            xmin = 0.5146485260770972 
+            xmax = 0.6530109922496585 
+            text = "ˈma" 
+        intervals [6]:
+            xmin = 0.6530109922496585 
+            xmax = 0.8906485260770972 
+            text = "ɾi" 
+        intervals [7]:
+            xmin = 0.8906485260770972 
+            xmax = 1.0666485260770973 
+            text = "" 
+        intervals [8]:
+            xmin = 1.0666485260770973 
+            xmax = 1.3776263159852007 
+            text = "ˈma" 
+        intervals [9]:
+            xmin = 1.3776263159852007 
+            xmax = 1.6101491041135847 
+            text = "ɾi" 
+        intervals [10]:
+            xmin = 1.6101491041135847 
+            xmax = 1.7085126004196134 
+            text = "" 
+        intervals [11]:
+            xmin = 1.7085126004196134 
+            xmax = 2.1619769531469704 
+            text = "ˈma" 
+        intervals [12]:
+            xmin = 2.1619769531469704 
+            xmax = 2.7400682411674544 
+            text = "ɾi" 
+        intervals [13]:
+            xmin = 2.7400682411674544 
+            xmax = 2.8157324690951686 
+            text = "" 
+        intervals [14]:
+            xmin = 2.8157324690951686 
+            xmax = 2.9878825909530726 
+            text = "ˈma" 
+        intervals [15]:
+            xmin = 2.9878825909530726 
+            xmax = 3.2346485260770974 
+            text = "ɾi" 
+        intervals [16]:
+            xmin = 3.2346485260770974 
+            xmax = 3.3626485260770975 
+            text = "" 
+        intervals [17]:
+            xmin = 3.3626485260770975 
+            xmax = 3.6423738511013046 
+            text = "ˈma" 
+        intervals [18]:
+            xmin = 3.6423738511013046 
+            xmax = 4.002648526077097 
+            text = "ɾi" 
+        intervals [19]:
+            xmin = 4.002648526077097 
+            xmax = 4.106648526077097 
+            text = "" 
+        intervals [20]:
+            xmin = 4.106648526077097 
+            xmax = 4.24232417290385 
+            text = "ˈma" 
+        intervals [21]:
+            xmin = 4.24232417290385 
+            xmax = 4.410648526077098 
+            text = "ɾi" 
+        intervals [22]:
+            xmin = 4.410648526077098 
+            xmax = 4.522648526077098 
+            text = "" 
+        intervals [23]:
+            xmin = 4.522648526077098 
+            xmax = 4.78773355636071 
+            text = "ˈma" 
+        intervals [24]:
+            xmin = 4.78773355636071 
+            xmax = 5.224377058127414 
+            text = "ɾi" 
+        intervals [25]:
+            xmin = 5.224377058127414 
+            xmax = 5.254642749298499 
+            text = "" 
+        intervals [26]:
+            xmin = 5.254642749298499 
+            xmax = 5.377295128002173 
+            text = "ˈma" 
+        intervals [27]:
+            xmin = 5.377295128002173 
+            xmax = 5.600176056835062 
+            text = "ɾi" 
+        intervals [28]:
+            xmin = 5.600176056835062 
+            xmax = 5.669297052154195 
+            text = "" 
+    item [2]:
+        class = "TextTier" 
+        name = "BI" 
+        xmin = 0 
+        xmax = 5.669297052154195 
+        points: size = 9 
+        points [1]:
+            number = 0.4026485260770972 
+            mark = "4" 
+        points [2]:
+            number = 0.8906485260770972 
+            mark = "4" 
+        points [3]:
+            number = 1.6101491041135847 
+            mark = "4" 
+        points [4]:
+            number = 2.7400682411674544 
+            mark = "4" 
+        points [5]:
+            number = 3.2346485260770974 
+            mark = "4" 
+        points [6]:
+            number = 4.002648526077097 
+            mark = "4" 
+        points [7]:
+            number = 4.410648526077098 
+            mark = "4" 
+        points [8]:
+            number = 5.224377058127414 
+            mark = "4" 
+        points [9]:
+            number = 5.600176056835062 
+            mark = "4" 
+    item [3]:
+        class = "IntervalTier" 
+        name = "anot" 
+        xmin = 0 
+        xmax = 5.669297052154195 
+        intervals: size = 19 
+        intervals [1]:
+            xmin = 0 
+            xmax = 0.038855304148047 
+            text = "" 
+        intervals [2]:
+            xmin = 0.038855304148047 
+            xmax = 0.4026485260770972 
+            text = "Llamada básica" 
+        intervals [3]:
+            xmin = 0.4026485260770972 
+            xmax = 0.5146485260770972 
+            text = "" 
+        intervals [4]:
+            xmin = 0.5146485260770972 
+            xmax = 0.8906485260770972 
+            text = "No sabes lo que me ha pasao" 
+        intervals [5]:
+            xmin = 0.8906485260770972 
+            xmax = 1.0666485260770973 
+            text = "" 
+        intervals [6]:
+            xmin = 1.0666485260770973 
+            xmax = 1.6101491041135847 
+            text = "No digas tonterías" 
+        intervals [7]:
+            xmin = 1.6101491041135847 
+            xmax = 1.7085126004196134 
+            text = "" 
+        intervals [8]:
+            xmin = 1.7085126004196134 
+            xmax = 2.7400682411674544 
+            text = "Muy fuerte lo que tengo que contarte" 
+        intervals [9]:
+            xmin = 2.7400682411674544 
+            xmax = 2.8157324690951686 
+            text = "" 
+        intervals [10]:
+            xmin = 2.8157324690951686 
+            xmax = 3.2346485260770974 
+            text = "Te suelto una galleta" 
+        intervals [11]:
+            xmin = 3.2346485260770974 
+            xmax = 3.3626485260770975 
+            text = "" 
+        intervals [12]:
+            xmin = 3.3626485260770975 
+            xmax = 4.002648526077097 
+            text = "Estoy en la mierda, te necesito" 
+        intervals [13]:
+            xmin = 4.002648526077097 
+            xmax = 4.106648526077097 
+            text = "" 
+        intervals [14]:
+            xmin = 4.106648526077097 
+            xmax = 4.410648526077098 
+            text = "Mira al mozo" 
+        intervals [15]:
+            xmin = 4.410648526077098 
+            xmax = 4.522648526077098 
+            text = "" 
+        intervals [16]:
+            xmin = 4.522648526077098 
+            xmax = 5.224377058127414 
+            text = "No te ralles, nena" 
+        intervals [17]:
+            xmin = 5.224377058127414 
+            xmax = 5.254642749298499 
+            text = "" 
+        intervals [18]:
+            xmin = 5.254642749298499 
+            xmax = 5.600176056835062 
+            text = "¡Que le meto!" 
+        intervals [19]:
+            xmin = 5.600176056835062 
+            xmax = 5.669297052154195 
+            text = "" 
+    item [4]:
+        class = "TextTier" 
+        name = "" 
+        xmin = 0 
+        xmax = 5.669297052154195 
+        points: size = 18 
+        points [1]:
+            number = 0.13469665952315202 
+            mark = "L+H*" 
+        points [2]:
+            number = 0.4026485260770972 
+            mark = "HL\% " 
+        points [3]:
+            number = 0.6265141410532962 
+            mark = "L*" 
+        points [4]:
+            number = 0.8906485260770972 
+            mark = "!HL%" 
+        points [5]:
+            number = 1.2671379375079455 
+            mark = "L* (creak)" 
+        points [6]:
+            number = 1.6101491041135847 
+            mark = "HL\% " 
+        points [7]:
+            number = 2.001080948406776 
+            mark = "L+H*" 
+        points [8]:
+            number = 2.7400682411674544 
+            mark = "!H%" 
+        points [9]:
+            number = 2.919140247263045 
+            mark = "L*" 
+        points [10]:
+            number = 3.2346485260770974 
+            mark = "HL%" 
+        points [11]:
+            number = 3.5194097888229137 
+            mark = "L+H*" 
+        points [12]:
+            number = 4.002648526077097 
+            mark = "H!H%" 
+        points [13]:
+            number = 4.245786376928972 
+            mark = "(breathy)" 
+        points [14]:
+            number = 4.522648526077098 
+            mark = "%H" 
+        points [15]:
+            number = 4.677072476116945 
+            mark = "L+H*" 
+        points [16]:
+            number = 5.224377058127414 
+            mark = "L%" 
+        points [17]:
+            number = 5.342917681880833 
+            mark = "L+H*" 
+        points [18]:
+            number = 5.600176056835062 
+            mark = "L%" 

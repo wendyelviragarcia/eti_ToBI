@@ -73,7 +73,7 @@ form Sp_ToBI Cat_ToBI transcriber
 	boolean correccion 0
 	boolean create_picture 1
 integer iniciar_en_archivo 1
-	boolean verbose 1
+
 
 endform
 
@@ -105,6 +105,9 @@ if etiquetaje_profundo = 1
 endif
 
 ##############		VARIABLES	######################
+debug = 1
+verbose = 1
+
 rango$ = "60-600"
 from = iniciar_en_archivo
 a = displaced_prenuclear
@@ -160,9 +163,9 @@ if numberOfFiles = 0
 	exitScript: "There are no .wav or .WAV files in folder" + folder$
 endif
 
-nucleusData = Create Table with column names: "nucleus", 0, "file nucleus last difInt nucleusRange range lastRange "
-allTable = Create Table with column names: "allTable", 0, "file interval humanNPA NPA intensity stringInt range stringRange dur stringDur durPre"
+#allTable = Create Table with column names: "allTable", 0, "file interval humanNPA NPA intensity stringInt range stringRange dur stringDur durPre"
 
+	nucleusData = Create Table with column names: "nucleus", 0, "file nucleus last difInt nucleusRange range lastRange "
 
 
 #bucle archivos
@@ -217,7 +220,7 @@ for ifile from 'from' to numberOfFiles
 	endif
 	
 	if q75 != undefined
-		maxpitch = q75 * 2.5
+		maxpitch = q75 * 1.5
 		#set to 2.5 for expressive speech because portuguese range goes over the octave, else 1.5
 	else
 		maxpitch= f0_max
@@ -226,7 +229,7 @@ for ifile from 'from' to numberOfFiles
 	selectObject: filteredSound 
 	myPitch = To Pitch: 0.001, minpitch, maxpitch
 	Kill octave jumps
-	removeObject: firstPitch
+	removeObject: firstPitch, filteredSound
 
 	gama = maxpitch - minpitch
 
@@ -958,7 +961,7 @@ for ifile from 'from' to numberOfFiles
 
 
 
-if stressType =0
+		if stressType =0
 			@printData: "Oxytone"
 
 			select TextGrid 'base$'
@@ -980,7 +983,7 @@ if stressType =0
 			@printData: "Non-oxytone"
 
 			select TextGrid 'base$'
-			middlelastton = startingpointlastton + (durlastton/2)
+			mediolastton = startingpointlastton + (durlastton/2)
 			parteslastton=  durlastton/6
 			t4lastton = parteslastton*2
 			t5lastton = parteslastton*4
@@ -1044,7 +1047,7 @@ if stressType =0
 		f05pos = Get value at time... 't5lastpos'
 
 		#elige valor más alto...
-		f0maxultimastressed = max (f01ton, f02ton,f03ton,f04ton,f05ton)
+		#f0maxton = max (f01ton, f02ton,f03ton,f04ton,f05ton)
 
 		selectObject: myPitch
 		f0maxton = Get maximum: startingpointlastton, endingpointlastton, "Hertz", "Parabolic"
@@ -1384,6 +1387,8 @@ if stressType =0
 			if lengua= 2 or lengua= 3 and difpremaxton >= 'umbral_upstep'
 				etiquetatono$ = "(L+\!dH*)+L"
 				etiquetaprofunda$ = "L+\!dH*"
+				tonicaH = 1
+
 				if b= 2
 				etiquetaprofunda$ = "L+H*"
 				endif
@@ -1403,6 +1408,8 @@ if stressType =0
 				if  lengua = 2 and ('difconlaanterior' > 'umbralnegativo') and ((labelstressedprevious$ = "H*") or (labelstressedprevious$ = "L*+H") or (labelstressedprevious$ = "L+H*") or (labelstressedprevious$ = "(L+H*)+H")or (labelstressedprevious$ = "L+(H*+H)") or (labelstressedprevious$ = "L*+(H+H)")or (labelstressedprevious$ = "(L*+H)+H)") or (labelstressedprevious$ = "(L+H*)+L)"))
 					etiquetatono$ = "\!dH*"
 					etiquetaprofunda$= "\!dH*"
+					tonicaH = 1
+
 					printline ¡H* (como si Sevilla, preg Canarias etc.)
 
 				else
@@ -1411,6 +1418,8 @@ if stressType =0
 					if difpremaxton >= umbral_upstep
 						etiquetatono$ = "L+\!dH*"
 						etiquetaprofunda$= "L+\!dH*"
+						tonicaH = 1
+
 						if b= 2
 							etiquetaprofunda$ = "L+H*"
 						endif
@@ -1430,13 +1439,29 @@ if stressType =0
 		endif
 
 		#each new IP adds a boundary tone that is not counted in the nucl but it is a point
-		# so we add the a point for each IP and we substract the current IP because we have not put the BT yet
-		Remove point: tier_Tones, nucl + iIP -1
-		Insert point... 'tier_Tones' 'middlelastton' 'labelTone$'
-		
+		# so we add the a point for each IP 
+
+		if iIP = 1 
+			Remove point: tier_Tones, numberOfPoints
+
+			#Remove point: tier_Tones, stressedstotalesfile
+			Insert point: tier_Tones, mediolastton, etiquetatono$
+		else
+			Remove point: tier_Tones, numberOfPoints
+
+			#Remove point: tier_Tones, stressedstotalesfile +iIP-1
+			Insert point: tier_Tones, mediolastton, etiquetatono$
+		endif
+
+
 		if etiquetaje_profundo = 1
-			Remove point: deep_tier, nucl + iIP - 1
-			Insert point: deep_tier, middlelastton, etiquetaprofunda$
+			if iIP = 1 
+				Remove point: deep_tier, numberOfPoints 
+				Insert point: deep_tier, mediolastton, etiquetaprofunda$
+			else
+				Remove point: deep_tier, numberOfPoints
+				Insert point: deep_tier, mediolastton, etiquetaprofunda$
+			endif
 		endif
 
 		#######################			TONOS JUNTURA			#######################
@@ -1504,7 +1529,7 @@ if stressType =0
 			dif96 = (12 / log10 (2)) * log10 ('f09cola' / 'f06cola')
 			dif129 = (12 / log10 (2)) * log10 ('f012cola' / 'f09cola')
 			dif63 = (12 / log10 (2)) * log10 ('f06cola' / 'f03cola')
-			dif12max = (12 / log10 (2)) * log10 ('f012cola' / 'f0maxultimastressed')
+			dif12max = (12 / log10 (2)) * log10 ('f012cola' / 'f0maxton')
 			
 
 			#pone un punto vacío para tener que borrar los dos últimos puntos en todos los casos
@@ -1998,7 +2023,7 @@ if stressType =0
 			f02cola = Get value at time... 't2cola'
 			f03cola = Get value at time... 't3cola'
 			f04cola = Get value at time... 't4cola'
-			f06cola = Get value at time... 't6cola'
+			f06cola = Get value at time... 't6cola'-0.05
 			select Pitch 'base$'
 			f0maxprimeramitaddecola = Get maximum: f00cola, f03cola, "Hertz", "Parabolic"
 			if f0maxprimeramitaddecola = undefined
@@ -2022,7 +2047,7 @@ if stressType =0
 			dif23 = (12 / log10 (2)) * log10 ('f03cola' / 'f02cola')
 			dif46 = (12 / log10 (2)) * log10 ('f06cola' / 'f04cola')
 			#para el mid
-			dif6max = (12 / log10 (2)) * log10 ('f06cola' / 'f0maxultimastressed')
+			dif6max = (12 / log10 (2)) * log10 ('f06cola' / 'f0maxton')
 			dif0max3 = (12 / log10 (2)) * log10 ('f0maxprimeramitaddecola' / 'f00cola')
 			dif0min3 = (12 / log10 (2)) * log10 ('f0minprimeramitaddecola' / 'f00cola')
 			dif6min3 = (12 / log10 (2)) * log10 ('f06cola' / 'f0minprimeramitaddecola')
@@ -2374,8 +2399,9 @@ if stressType =0
 if etiquetaje_normalizado = 1
 	select TextGrid 'base$'
 	numberOfTiers = Get number of tiers
-	Duplicate tier: numberOfTiers, numberOfTiers+1, "Standardization"
-	tier_standardization = numberOfTiers+1
+
+	tier_standardization= deep_tier+1 
+	Duplicate tier: deep_tier, tier_standardization, "Standardization"
 	numberOfPoints = Get number of points: tier_standardization
 	if numberOfPoints < 1
 		selectObject: mySound,myText
@@ -2570,7 +2596,9 @@ endif
 	endif
 	select TextGrid 'base$'
 
+if debug = 0
 	Save as text file: folder$ + "/"+ base$ + ".TextGrid"
+endif
 
 ##############	CREAR FIGURAS		#####################
 	if create_picture = 1
@@ -2579,8 +2607,10 @@ endif
 		minpitch = do ("Get minimum...", 0, 0, "Hertz", "Parabolic")
 		maxpitch = do ("Get maximum...", 0, 0, "Hertz", "Parabolic")
 		gama = maxpitch - minpitch
-		select Sound 'base$'
-		To Spectrogram... 0.005 5000 0.002 20 Gaussian
+		
+
+		selectObject: mySound
+		mySpectrogram= To Spectrogram... 0.005 5000 0.002 20 Gaussian
 		# Dibuja el oscilograma, espectrograma el pitch, el TextGrid y una caja alrededor de todo ello.
 		# Fuente de texto y color
 		Times
@@ -2737,9 +2767,8 @@ endif
 
 
 ##############	LIMPIAR		#####################
-	select all
-	minus Strings list
-	Remove
+	removeObject: mySound, myText, myPitch, myPointProcess, intensity, intTable, stressedInventory
+	
 
 #############	FINAL BUCLE GENERAL	#############
 # bucle archivos
