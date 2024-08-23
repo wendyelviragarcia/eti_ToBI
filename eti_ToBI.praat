@@ -1,20 +1,23 @@
-#	Eti_ToBI v.7 (2018)
+#	Eti_ToBI v.8 (2024)
+# Cite as: Elvira-García, W., Roseano, P., Fernández-Planas, A. M., & Martínez-Celdrán, E. (2016). A tool for automatic transcription of intonation: Eti_ToBI a ToBI transcriber for Spanish and Catalan. Language Resources and Evaluation, 50, 767-792.
 #
-#
-#
+#				DESCRIPTION
+
 #	This is a tool that automatically labels intonational events according to the Sp_ToBI and Cat_ToBI 2015 current systems. T
 #	The system consist on a Praat script that assigns ToBI labels from lexical data introduced by the researcher and the
 #	acoustical data that it extracts from sound files.  The reliability results for both Cat_ToBI and Sp_ToBI corpora shows
 #	a level of agreement equal to the one shown by human transcribers among them in the literature.
+
+# 
 #
-#				DESCRIPTION
 #
 #				INSTRUCTIONS
 #	0. Needs 
 #		a) a folder with sounds (a sentence in each wav)
-#		b) textgrid with the same name than the sound and interval syllables and a mark for the stressed syllables
+#		b) by-syllable textgrid with a mark for the stressed syllables and the same name as the wav (without spaces). You can find wav+textgrid examples at the website
+# 		
 #	
-#	Wendy Elvira-García (2013-2015). Eti-ToBI. [praat script] Retrieved from https://github.com/wendyelviragarcia/eti_ToBI
+#	Wendy Elvira-García (2013-2024). Eti-ToBI. [praat script] Retrieved from https://github.com/wendyelviragarcia/eti_ToBI
 #	wendy elvira (at) ub.edu
 #	
 #	Laboratori de Fonètica (Universitat de Barcelona)
@@ -39,6 +42,10 @@
 form Sp_ToBI Cat_ToBI transcriber
 	
 	#sentence folder /Users/weg/Desktop/test
+	comment Your folder should be something like
+	comment C:\Users\someName\Desktop (Windows)
+	comment or
+	comment /Users/someName/Desktop (Mac)
 
 	sentence folder ./data_for_testing/
 
@@ -67,12 +74,12 @@ form Sp_ToBI Cat_ToBI transcriber
 	option Sp_ToBI
 	option Cat_ToBI
 	option Fri_ToBI
-	#option MAE_ToBI
-	#option It_ToBI
+
 	comment ¿Quieres parar para corregir?
 	boolean correccion 0
 	boolean create_picture 1
-integer iniciar_en_archivo 1
+	integer iniciar_en_archivo 1
+	boolean Verbose 1
 
 
 endform
@@ -105,7 +112,7 @@ if etiquetaje_profundo = 1
 endif
 
 ##############		VARIABLES	######################
-debug = 1
+debug = 0
 verbose = 1
 
 rango$ = "60-600"
@@ -379,15 +386,14 @@ for ifile from 'from' to numberOfFiles
 					endingpointprestressed = Get end point... 'segmentation_tier' 'numberOfIntervalPrestressed'
 					durpretonica = endingpointprestressed - startingpointprestressed
 					midprestressed = startingpointprestressed + (durpretonica/2)
-						printline tonica centro: 'midstressed'
+					@printData("tónica centro: " + fixed$(midstressed,0))
+
 					numberOfIntervalpoststressed = actualInterval + 1
 					startingpointpoststressed = Get start point... 'segmentation_tier' 'numberOfIntervalpoststressed'
 					endingpointpoststressed = Get end point... 'segmentation_tier' 'numberOfIntervalpoststressed'
 					durpoststressed = endingpointpoststressed - startingpointpoststressed
 					mediopoststressed = startingpointpoststressed + (durpoststressed/2)
-					printline inicio postónica: 'startingpointpoststressed' medio poststressed: 'mediopoststressed' final postónica: 'endingpointpoststressed'
-
-
+					@printData("inicio postónica: " + fixed$(startingpointpoststressed,0)+"medio postónica: " + fixed$(mediopoststressed,0)+"final postónica: " + fixed$(endingpointpoststressed,0) )
 
 					selectObject: intensity
 					meanInt = Get mean: startingpointstressed, endingpointpoststressed, "energy"
@@ -434,7 +440,7 @@ for ifile from 'from' to numberOfFiles
 					f02pos = Get value at time... 'mediopoststressed'
 					f03pos = Get value at time... 'endingpointpoststressed'
 
-					printline F01 'f01pos' F02 'f02pos' F03 'f03pos'
+					
 
 					select Pitch 'base$'
 					f0tonmax = Get maximum: startingpointstressed, endingpointstressed, "Hertz", "Parabolic"
@@ -498,7 +504,7 @@ for ifile from 'from' to numberOfFiles
 					#CALCULO DEL TONO EN VEZ DE POR TERCIOS POR DECLINACION
 					select TextGrid 'base$'
 					numeropuntosahora = Get number of points: 'tier_Tones'
-					printline numeropuntosahora 'numeropuntosahora'
+
 					if numeropuntosahora >=2
 						labelstressedprevious$ = Get label of point: tier_Tones, numeropuntosahora-1
 						tpuntoanterior = Get time of point: tier_Tones, numeropuntosahora-1
@@ -534,7 +540,6 @@ for ifile from 'from' to numberOfFiles
 
 						endif
 					endif
-					printline pitchaccent 'pitchaccent$'
 
 
 					####### Desacentuación
@@ -575,7 +580,8 @@ for ifile from 'from' to numberOfFiles
 					if lengua = 3 and diftonMidEnd < 'umbralnegativo'
 						etiquetatono$ = "H+L*"
 						etiquetatonoprofundo$= "H+L*"
-		printline formula pre H+L* preg que
+						@printData: "formula pre H+L* preg que"
+
 					endif
 
 					#si puedes mira el pto anterior y pon si el plateu es alto o bajo dependiendo del tono anterior
@@ -604,7 +610,8 @@ for ifile from 'from' to numberOfFiles
 					if abs (diftonmintonmax) < 'umbral' and diftontargetpos >= 'umbral'
 						etiquetatono$ = "L*+H"
 						etiquetatonoprofundo$ = "L*+H"
-		printline fórmula prenúcleo 'labeli$' L*+H
+						@printData: "fórmula prenúcleo L*+H"
+
 					endif
 
 					if abs (diftonmintonmax) < 'umbral' and diftonpos < 'umbralnegativo'
@@ -615,7 +622,8 @@ for ifile from 'from' to numberOfFiles
 						if c = 1
 							etiquetatonoprofundo$ = "H*+L"
 						endif
-		printline fórmula prenúcleo 'labeli$' H*+L
+						@printData: "fórmula prenúcleo H*+L"
+
 					endif
 					######
 
@@ -629,7 +637,6 @@ for ifile from 'from' to numberOfFiles
 						if lengua = 2 or lengua = 3
 							select TextGrid 'base$'
 							numeropuntosahora = Get number of points: 'tier_Tones'
-							printline  numeropuntosahora 'numeropuntosahora'
 							if numeropuntosahora >=1
 								labelstressedprevious$ = Get label of point: tier_Tones, numeropuntosahora
 								if labelstressedprevious$ ="L*+H" or labelstressedprevious$ ="H+(L*+H)"
@@ -648,11 +655,15 @@ for ifile from 'from' to numberOfFiles
 									#select PitchTier 'base$'
 									#f0_targetanterior = Get value at time: fin_target
 									difconlaanterior = (12 / log10 (2)) * log10 ('f02pre' / 'f0_targetanterior')
-									printline difconlaanterior 'difconlaanterior'
+									@printData: "difconlaanterior: " + fixed$(difconlaanterior, 0)
+
+
 									if difconlaanterior < umbralnegativo
 										etiquetatono$ = "H+L*/L*"
 										etiquetatonoprofundo$ = "L*"
-										printline fórmula prenúcleo 'labeli$' "H+L*/L*"
+
+										@printData: "fórmula prenúcleo H+L*/L*"
+
 									endif
 								endif
 							endif
@@ -667,14 +678,16 @@ for ifile from 'from' to numberOfFiles
 							else
 							etiquetatonoprofundo$ = "H+L*"
 							endif
-							printline fórmula prenúcleo 'labeli$' ¡H+L* pretónica extraalta
+							@printData: "fórmula prenúcleo ¡H+L* pretónica extraalta"
+
 						endif
 					
 
 					#subida entre la pretonica y la tónica y entre la tónica y la postónica. Y los dos movimientos pasan el umbral.
 					if difpreton >= 'umbral' and diftonpos>= 'umbral'
 						etiquetatono$ = "L+H*+H"
-			printline fórmula prenúcleo 'labeli$' L+H*+H
+						@printData: "fórmula prenúcleo L+H*+H"
+
 						if abs (difpreton) < abs (diftonpos)
 							etiquetatono$ = "(L+H*)+H"
 							etiquetatonoprofundo$ = "L*+H"
@@ -704,14 +717,15 @@ for ifile from 'from' to numberOfFiles
 					if difpreton >= 'umbral' and f01pos >= f03pos
 						etiquetatono$ = "L+H*"
 						etiquetatonoprofundo$ = "L+H*"
+						@printData: "fórmula prenúcleo L*+\!dH*"
 
-		printline fórmula prenúcleo 'labeli$' L*+\!dH*
 					endif
 
 					#  ETIQUETA CUESTIONABLE subida entre la pretónica y la tónica con el pico en el centro de la postónica
 					if (diftonmintonmax >= 'umbral') and (diftonMidEnd >0) and (f01pos >= f02ton) and (f02pos >= f01pos) and (f02pos >= f03pos)
 						etiquetatono$ = "L+H*+H"
-						printline fórmula prenúcleo 'labeli$' L+H*+H
+						@printData: "fórmula prenúcleo L+H*+H"
+
 						if abs (diftonmintonmax) < abs (diftonpos)
 							etiquetatono$ = "(L+H*)+H"
 							etiquetatonoprofundo$ = "L*+H"
@@ -746,7 +760,6 @@ for ifile from 'from' to numberOfFiles
 						if lengua = 2 or lengua = 3
 							select TextGrid 'base$'
 							numeropuntosahora = Get number of points: 'tier_Tones'
-							printline  numeropuntosahora 'numeropuntosahora'
 							if numeropuntosahora >=1
 								labelstressedprevious$ = Get label of point: tier_Tones, numeropuntosahora
 								if (labelstressedprevious$ = "L*+H") or (labelstressedprevious$ ="L+(H*+H)") or (labelstressedprevious$ ="(L+H*)+H")
@@ -764,42 +777,18 @@ for ifile from 'from' to numberOfFiles
 									#select PitchTier 'base$'
 									#f0_targetanterior = Get value at time: fin_target
 									difconlaanterior = (12 / log10 (2)) * log10 ('f0tonmin' / 'f0_targetanterior')
-									printline difconlaanterior 'difconlaanterior'
 									if difconlaanterior < umbralnegativo
 										etiquetatonoprofundo$ = "L*+H"
 									endif
 								endif
 							endif
 						endif
-		printline fórmula prenúcleo 'labeli$' H+L*+H
+
+						@printData: "fórmula prenúcleo H+L*+H"
 					endif
 
 
-					# if difpreton >= 'umbral' and diftonpos < 'umbralnegativo'
-						# etiquetatono$ = "L+H*+L"
-						# if f = 1
-							# etiquetatonoprofundo$= "L+H*+L"
-						# else
-							# if abs (difpreton) >= abs (diftonpos)
-								# etiquetatono$ = "L+(H*+L)"
-								# etiquetatonoprofundo$= "L+H*"
-								# #if diftonmintonmax > 'umbral' and a= 1
-								# #	etiquetatonoprofundo$ = "L+<H*"
-								# #endif
-							# else
-								# etiquetatono$ = "(L+H*)+L"
-								# if c= 1
-									# etiquetatonoprofundo$= "H*+L"
-								# else
-									# etiquetatonoprofundo$= "L+H*"
-								# endif
-							# endif
-						# endif
-		# printline fórmula prenúcleo 'labeli$' L+H*+L
-					# endif
-
-
-
+				
 
 
 
@@ -918,13 +907,7 @@ for ifile from 'from' to numberOfFiles
 		nucl= Search column: "isNucleus", "yes"
 
 
-		if nucl <> 0
-			ultimastressed= Get value: nucl, "nInterval"
-			early = 1
-		else 
-			nucl = stressedstotalesfile
-			early= 0
-		endif
+
 
 
 		select TextGrid 'base$'
@@ -935,7 +918,6 @@ for ifile from 'from' to numberOfFiles
 		durlastton = endingpointlastton - startingpointlastton
 
 		stressType = ultimasilaba - ultimastressed
-
 
 		mediolastton = startingpointlastton + (durlastton/2)
 		parteslastton=  durlastton/6
@@ -1061,7 +1043,8 @@ for ifile from 'from' to numberOfFiles
 
 		@printData: "Last pres syl:" + fixed$(f02pre, 0) + "Last post: "+ fixed$(f02pos, 0)
 
-			printline f02pre: 'f02pre' f02pos: 'f02pos'
+
+
 		##### 	calculos semitonos ultima tonica #######
 		difpreton = (12 / log10 (2)) * log10 ('f02ton' / 'f02pre')
 		diftonpos = (12 / log10 (2)) * log10 ('f02pos' / 'f02ton')	
@@ -1171,7 +1154,6 @@ for ifile from 'from' to numberOfFiles
 						tonicaH =0
 					endif
 				endif
-			printline pitchaccent 'pitchaccent$'
 			endif
 
 		
@@ -1210,10 +1192,13 @@ for ifile from 'from' to numberOfFiles
 					etiquetatono$ = "H+(L*+H)"
 				endif
 			endif
-			printline Bajada en la pretónica (tónica baja), noes un tono fonológico en español
+
+			@printData: "Bajada en la pretónica (tónica baja), noes un tono fonológico en español"
+
 			if (!lengua = 3) and (!lengua= 2)
 			etiquetaprofunda$ = "H+L*"
-			printline H+L* Bajada en la pretónica (tónica baja)
+			@printData: "H+L* Bajada en la pretónica (tónica baja)"
+
 			endif
 		endif
 
@@ -1225,7 +1210,7 @@ for ifile from 'from' to numberOfFiles
 				etiquetaprofunda$ = "H*"
 			endif
 			tonicaH = 1
-			printline H*+L
+			@printData: "H*+L" 
 		endif
 
 		# H+L* PUESTO PARA QUE DIGA DESACENTUADO SI VIENE DE OTRO TONO
@@ -1273,14 +1258,14 @@ for ifile from 'from' to numberOfFiles
 
 					#aquí si pongo con el pto 3 de la pretónica deja de ver los H+L*
 					difconlaanterior = (12 / log10 (2)) * log10 ('f01pre' / 'target_anterior')
-					printline difconlaanterior 'difconlaanterior'
 
 
 					if numeropuntosahora <= 1 and difconlaanterior < 'umbralnegativo'
 						etiquetatono$ = "H+L*"
 						etiquetaprofunda$ = "L*"
 						tonicaH= 0
-						printline H+L*
+						@printData: "H+L*" 
+
 					endif
 
 					if (numeropuntosahora > 1) and (labelstressedprevious$ <> "H+L*") and (labelstressedprevious$ <> "H+(L*+H)") and (difconlaanterior < 'umbralnegativo')
@@ -1290,7 +1275,8 @@ for ifile from 'from' to numberOfFiles
 					endif
 				endif
 			endif
-		printline H+L* fonético
+			@printData: "H+L* fonético" 
+
 		endif
 
 
@@ -1316,7 +1302,8 @@ for ifile from 'from' to numberOfFiles
 						if (labeltonoanterior$ = "L*+H") and diftonmaxton > 'umbral'
 							etiquetatono$ = "H+L*"
 							etiquetaprofunda$ = "L*"
-							printline H+L* --> L*
+										@printData: "H+L* --> L*" 
+
 							tonicaH=0
 						endif
 					endif
@@ -1331,7 +1318,7 @@ for ifile from 'from' to numberOfFiles
 			etiquetatono$ = "L+H*"
 			etiquetaprofunda$ = "L+H*"
 			tonicaH = 1
-			printline L+H*
+			@printData: "L+H*" 
 
 			if difpreton >= umbral and diftonpos < umbralnegativo
 				if abs (difpreton) > abs (diftonpos)
@@ -1351,7 +1338,8 @@ for ifile from 'from' to numberOfFiles
 				if pitchaccent$ = "L*" and ((diftonStartMid < umbral) or (diftonMidEnd<umbral) or (diftonStartEnd<umbral) or (f01ton > f02ton)) and (numberpoints > 1)
 					etiquetatono$ = "L+H*"
 					etiquetaprofunda$ = "L*"
-					printline L+H*--> L*
+								@printData: "L+H*--> L*" 
+
 					tonicaH = 1
 				endif
 			endif
@@ -1362,7 +1350,8 @@ for ifile from 'from' to numberOfFiles
 		if (difpremaxton >= umbral_upstep) and ((lengua = 3) or (lengua = 2))
 			etiquetatono$ = "L+\!dH*"
 			etiquetaprofunda$ = "L+\!dH*"
-			printline L+¡H*
+											@printData: "L+¡H*" 
+
 			if b= 2
 			etiquetaprofunda$ = "L+H*"
 			endif
@@ -1378,7 +1367,9 @@ for ifile from 'from' to numberOfFiles
 		if 	(difpreton>= 'umbral') and ((diftonMidEnd < 'umbralnegativo') or (diftonpos < 'umbralnegativo')) and (abs (difpreton) < abs (diftonpos))
 			etiquetatono$ = "(L+H*)+L"
 			etiquetaprofunda$ = "H*+L"
-			printline H*+L
+
+			@printData: "H*+L" 
+
 			tonicaH=0
 			if c = 0
 				etiquetaprofunda$ = "L+H*"
@@ -1396,25 +1387,23 @@ for ifile from 'from' to numberOfFiles
 
 			select TextGrid 'base$'
 			numeropuntosahora = Get number of points: 'tier_Tones'
-			printline numeropuntosahora 'numeropuntosahora'
 			if numeropuntosahora >=2
 				labelstressedprevious$ = Get label of point: tier_Tones, numeropuntosahora-1
 				tpuntoanterior = Get time of point: tier_Tones, numeropuntosahora-1
 					select PitchTier 'base$'
 					f0_puntoanterior = Get value at time: tpuntoanterior
 					difconlaanterior = (12 / log10 (2)) * log10 ('f01pre' / 'f0_puntoanterior')
-					printline difconlaanterior 'difconlaanterior'
 
 				if  lengua = 2 and ('difconlaanterior' > 'umbralnegativo') and ((labelstressedprevious$ = "H*") or (labelstressedprevious$ = "L*+H") or (labelstressedprevious$ = "L+H*") or (labelstressedprevious$ = "(L+H*)+H")or (labelstressedprevious$ = "L+(H*+H)") or (labelstressedprevious$ = "L*+(H+H)")or (labelstressedprevious$ = "(L*+H)+H)") or (labelstressedprevious$ = "(L+H*)+L)"))
 					etiquetatono$ = "\!dH*"
 					etiquetaprofunda$= "\!dH*"
 					tonicaH = 1
 
-					printline ¡H* (como si Sevilla, preg Canarias etc.)
+					@printData: "¡H* (como si Sevilla, preg Canarias etc.)" 
+
 
 				else
-
-					printline L+H* (prueba para cuando es L+\!dH* por los 6 st)
+					@printData: "L+H* (prueba para cuando es L+\!dH* por los 6 st)" 
 					if difpremaxton >= umbral_upstep
 						etiquetatono$ = "L+\!dH*"
 						etiquetaprofunda$= "L+\!dH*"
@@ -1423,7 +1412,8 @@ for ifile from 'from' to numberOfFiles
 						if b= 2
 							etiquetaprofunda$ = "L+H*"
 						endif
-						printline L+\!dH para las preg parciales del catalán
+						@printData: "L+\!dH para las preg parciales del catalán" 
+
 					endif
 				endif
 			endif
@@ -1448,7 +1438,6 @@ for ifile from 'from' to numberOfFiles
 			Insert point: tier_Tones, mediolastton, etiquetatono$
 		else
 			Remove point: tier_Tones, numberOfPoints
-
 			#Remove point: tier_Tones, stressedstotalesfile +iIP-1
 			Insert point: tier_Tones, mediolastton, etiquetatono$
 		endif
@@ -1510,14 +1499,14 @@ for ifile from 'from' to numberOfFiles
 
 
 			select Pitch 'base$'
-			f0maxprimeramitaddetail = Get maximum: f03tail, f06tail, "Hertz", "Parabolic"
-			if f0maxprimeramitaddetail = undefined
-				f0maxprimeramitaddetail = f06tail
+			f0maxprimeramitaddecola = Get maximum: f03cola, f06cola, "Hertz", "Parabolic"
+			if f0maxprimeramitaddecola = undefined
+				f0maxprimeramitaddecola = f06cola
 			endif
 
-			f0minprimeramitaddetail = Get minimum: f03tail, f06tail, "Hertz", "Parabolic"
-			if f0minprimeramitaddetail = undefined
-				f0minprimeramitaddetail = f06tail
+			f0minprimeramitaddecola = Get minimum: f03cola, f06cola, "Hertz", "Parabolic"
+			if f0minprimeramitaddecola = undefined
+				f0minprimeramitaddecola = f06cola
 			endif
 
 
@@ -1531,7 +1520,8 @@ for ifile from 'from' to numberOfFiles
 			dif63 = (12 / log10 (2)) * log10 ('f06cola' / 'f03cola')
 			dif12max = (12 / log10 (2)) * log10 ('f012cola' / 'f0maxton')
 			
-
+			
+			selectObject: myText
 			#pone un punto vacío para tener que borrar los dos últimos puntos en todos los casos
 			Insert point... 'tier_Tones' 't12cola' 'etiquetafinal$'
 			if etiquetaje_profundo = 1
@@ -1553,7 +1543,7 @@ for ifile from 'from' to numberOfFiles
 					Remove point... 'deep_tier' 'pointfinal'
 					Insert point... 'deep_tier' 't12cola' 'etiquetafinalprofunda$'
 				endif
-				printline etiqueta final L%
+				@printData: "etiqueta final L%"
 			endif
 
 			if tonicaH = 0 and dif126 >= 'umbral'
@@ -1565,7 +1555,7 @@ for ifile from 'from' to numberOfFiles
 					Remove point... 'deep_tier' 'pointfinal'
 					Insert point... 'deep_tier' 't12cola' 'etiquetafinalprofunda$'
 				endif
-				printline etiqueta final H%
+				@printData: "etiqueta final H%"
 			endif
 
 			#formulacalculomid
@@ -1579,7 +1569,7 @@ for ifile from 'from' to numberOfFiles
 					Remove point... 'deep_tier' 'pointfinal'
 					Insert point... 'deep_tier' 't12cola' 'etiquetafinalprofunda$'
 				endif
-				printline etiqueta final !H%
+				@printData: "etiqueta final !H%"
 			endif
 
 
@@ -1594,7 +1584,7 @@ for ifile from 'from' to numberOfFiles
 					Remove point... 'deep_tier' 'pointfinal'
 					Insert point... 'deep_tier' 't12cola' 'etiquetafinalprofunda$'
 				endif
-				printline etiqueta final H%
+				@printData: "etiqueta final H%"
 			endif
 
 
@@ -1621,7 +1611,8 @@ for ifile from 'from' to numberOfFiles
 					Remove point... 'deep_tier' 'pointfinal'
 					Insert point... 'deep_tier' 't12cola' 'etiquetafinalprofunda$'
 				endif
-				printline etiqueta final !H%
+								@printData: "etiqueta final !H%"
+
 			endif
 
 			if tonicaH = 1  and (f012cola > tercio1) and (dif12max<1) and durcola>0.60
@@ -1633,7 +1624,8 @@ for ifile from 'from' to numberOfFiles
 					Remove point... 'deep_tier' 'pointfinal'
 					Insert point... 'deep_tier' 't12cola' 'etiquetafinalprofunda$'
 				endif
-				printline etiqueta final !H%
+				@printData: "etiqueta final !H%"
+
 			endif
 
 
@@ -1646,7 +1638,6 @@ for ifile from 'from' to numberOfFiles
 			#CALCULO DEL TONO EN VEZ DE POR TERCIOS POR DECLINACION
 			select TextGrid 'base$'
 			numeropuntosahora = Get number of points: 'tier_Tones'
-			printline numeropuntosahora 'numeropuntosahora'
 			if numeropuntosahora >=3
 				labelstressedprevious$ = Get label of point: tier_Tones, numeropuntosahora-1
 				tpuntoanterior = Get time of point: tier_Tones, numeropuntosahora-1
@@ -1663,7 +1654,6 @@ for ifile from 'from' to numberOfFiles
 								f0maxtonicaanterior = value
 					endif
 					difconlaanterior = (12 / log10 (2)) * log10 (f01ton / f0maxtonicaanterior)
-					printline difconlaanterior 'difconlaanterior'
 
 				if ('difconlaanterior' > 'umbralnegativo') and ((labelstressedprevious$ = "H*") or (labelstressedprevious$ = "L*+H") or (labelstressedprevious$ = "L+H*") or (labelstressedprevious$ = "(L+H*)+H")or (labelstressedprevious$ = "L+(H*+H)") or (labelstressedprevious$ = "L*+(H+H)") or (labelstressedprevious$ = "(L*+H)+H)") or (labelstressedprevious$ = "(L+H*)+L)"))
 					pitchaccent$ = "H*"
@@ -1685,7 +1675,6 @@ for ifile from 'from' to numberOfFiles
 						pitchaccent$ = "L*"
 					endif
 				endif
-			printline pitchaccent 'pitchaccent$'
 			endif
 
 
@@ -1707,7 +1696,9 @@ for ifile from 'from' to numberOfFiles
 					etiquetafinalprofunda$= "L\% "
 					@ponetiqueta ()
 
-					printline formula monotonales-agudasalineacionespecial H* L%--> L*L%
+					@printData: "fórmula monotonales-agudasalineacionespecial H* L%--> L*L%"
+
+					!H
 				endif
 			endif
 
@@ -1717,7 +1708,8 @@ for ifile from 'from' to numberOfFiles
 				etiquetafinal$ = "L\% "
 				etiquetafinalprofunda$= "L\% "
 				@ponetiqueta ()
-				printline formula monotonales-agudasalineacionespecial H* L%
+				@printData: "fórmula monotonales-agudasalineacionespecial H* L%"
+
 			endif
 
 
@@ -1734,7 +1726,7 @@ for ifile from 'from' to numberOfFiles
 				etiquetafinal$ = "HL\% "
 				etiquetafinalprofunda$= "HL\% "
 				@ponetiqueta ()
-				printline formula 1 L* HL%
+				@printData: "fórmula 1 L* HL%"
 			endif
 
 
@@ -1745,8 +1737,8 @@ for ifile from 'from' to numberOfFiles
 				etiquetafinal$ = "L\% "
 				etiquetafinalprofunda$= "HL\% "
 				@ponetiqueta ()
-				printline formula 1 L* HL%
-				printline difpre3 'difpre3' dif96 'dif96' dif129 'dif912'
+				@printData: "fórmula 1 L* HL%"
+
 			endif
 
 
@@ -1761,7 +1753,9 @@ for ifile from 'from' to numberOfFiles
 				etiquetafinal$ = "HL\% "
 				etiquetafinalprofunda$= "HL\% "
 				@ponetiqueta ()
-				printline 2 L* HL % con otra alineación
+				@printData: "fórmula 2 L* HL % con otra alineación"
+
+
 			endif
 			##### fin duplicado
 
@@ -1776,7 +1770,8 @@ for ifile from 'from' to numberOfFiles
 				etiquetafinalprofunda$ = "H\% "
 				endif
 				@ponetiqueta ()
-				printline 3 L* LH%
+								@printData: "fórmula 3 L* HL % "
+
 			endif
 
 
@@ -1788,7 +1783,8 @@ for ifile from 'from' to numberOfFiles
 				etiquetatonoprofundo$ = "L*"
 				etiquetafinalprofunda$ = "H!H\% "
 				@ponetiqueta ()
-				printline 5 L* H!H%
+				@printData: "fórmula 5 L* H!H%"
+
 			endif
 
 			if  pitchaccent$ = "L*" and difconlaanterior > 'umbralnegativo' and difpre3 < 'umbralnegativo'
@@ -1799,7 +1795,8 @@ for ifile from 'from' to numberOfFiles
 				etiquetafinalprofunda$ = "HL\% "
 
 				@ponetiqueta ()
-				printline 6 H+L* HL%
+				@printData: "fórmula 6 H+L* HL%"
+
 
 			endif
 
@@ -1812,7 +1809,8 @@ for ifile from 'from' to numberOfFiles
 				etiquetafinalprofunda$ = "HL\% "
 
 				@ponetiqueta ()
-				printline 6 H+L* HL%
+				@printData: "fórmula 6,5 H+L* HL% con duración"
+
 			endif
 
 
@@ -1827,7 +1825,8 @@ for ifile from 'from' to numberOfFiles
 					etiquetafinalprofunda$ = "H\% "
 				endif
 				@ponetiqueta ()
-	printline 7 H+L* LH%
+					@printData: "fórmula 7 H+L* LH%"
+
 			endif
 
 			if  pitchaccent$ = "L*" and difconlaanterior > 'umbralnegativo' and difpre3 < 'umbralnegativo'
@@ -1838,7 +1837,8 @@ for ifile from 'from' to numberOfFiles
 				etiquetafinalprofunda$ = "L!H\% "
 
 				@ponetiqueta ()
-	printline 8 H+L* L!H%
+						@printData: "fórmula 8 H+L* L!H%"
+
 			endif
 
 			if   pitchaccent$ = "L*" and difconlaanterior > 'umbralnegativo' and difpre3 < 'umbralnegativo'
@@ -1848,7 +1848,9 @@ for ifile from 'from' to numberOfFiles
 				etiquetatonoprofundo$ = "H+L*"
 				etiquetafinalprofunda$ = "H!H\% "
 				@ponetiqueta ()
-	printline 9  H+L* H!H%
+	 
+				@printData: "fórmula 9  H+L* H!H%"
+
 			endif
 
 			# después de h*
@@ -1860,7 +1862,8 @@ for ifile from 'from' to numberOfFiles
 				etiquetafinalprofunda$ = "HL\% "
 
 				@ponetiqueta ()
-	printline 10 H* HL%
+					@printData: "fórmula 10 H* HL%"
+
 			endif
 
 			if pitchaccent$= "H*" and ((difpre3 >= 'umbralnegativo') or (difpre3 < 'umbral'))
@@ -1870,7 +1873,8 @@ for ifile from 'from' to numberOfFiles
 				etiquetatonoprofundo$ = "H*"
 				etiquetafinalprofunda$ = "LH\% "
 				@ponetiqueta ()
-	printline 11 H* LH%
+				@printData: "fórmula 11 H* LH%"
+
 
 			endif
 
@@ -1882,7 +1886,8 @@ for ifile from 'from' to numberOfFiles
 				etiquetafinalprofunda$ = "L!H\% "
 
 				@ponetiqueta ()
-	printline 12 H* L!H%
+					@printData: "fórmula 12 H* L!H%"
+
 			endif
 
 			if pitchaccent$= "H*" and ((difpre3 >= 'umbralnegativo') or (difpre3 < 'umbral'))
@@ -1893,7 +1898,8 @@ for ifile from 'from' to numberOfFiles
 				etiquetafinalprofunda$ = "H!H\% "
 
 				@ponetiqueta ()
-	printline 13 H* H!H%
+						@printData: "fórmula 13 H* H!H%"
+
 			endif
 
 			if pitchaccent$= "H*" and ((difpre3 >= 'umbralnegativo') or (difpre3 < 'umbral'))
@@ -1904,7 +1910,8 @@ for ifile from 'from' to numberOfFiles
 				etiquetafinalprofunda$ = "\!dHL\% "
 
 				@ponetiqueta ()
-	printline 14 H*\!dHL%
+							@printData: "fórmula 14 H*\!dHL%"
+
 			endif
 
 			if pitchaccent$= "H*" and ((difpre3 >= 'umbralnegativo') or (difpre3 < 'umbral'))
@@ -1915,7 +1922,8 @@ for ifile from 'from' to numberOfFiles
 				etiquetafinalprofunda$ = "\!dH!H\% "
 
 				@ponetiqueta ()
-	printline 15 H* \!dH!H%
+				@printData: "fórmula 15 H* \!dH!H%"
+
 			endif
 
 			if difpre3 >= 'umbral'
@@ -1932,7 +1940,8 @@ for ifile from 'from' to numberOfFiles
 				etiquetafinal$ = "LH\% "
 				etiquetatonoprofundo$ = "L+H*"
 				etiquetafinalprofunda$ = "LH\% "
-	printline 16 L+H* LH%
+					@printData: "16 L+H* LH%"
+
 				@ponetiqueta ()
 			endif
 
@@ -1941,7 +1950,8 @@ for ifile from 'from' to numberOfFiles
 				etiquetafinal$ = "H\% "
 				etiquetatonoprofundo$ = "L+H*"
 				etiquetafinalprofunda$ = "LH\% "
-	printline 16 L+H* LH%
+					@printData: "fórmula 16 L+H* LH%"
+
 				@ponetiqueta ()
 			endif
 
@@ -2051,19 +2061,25 @@ for ifile from 'from' to numberOfFiles
 			dif0max3 = (12 / log10 (2)) * log10 ('f0maxprimeramitaddecola' / 'f00cola')
 			dif0min3 = (12 / log10 (2)) * log10 ('f0minprimeramitaddecola' / 'f00cola')
 			dif6min3 = (12 / log10 (2)) * log10 ('f06cola' / 'f0minprimeramitaddecola')
+			
+			@printData: "__ "
+			@printData: "Diferecias tonema"
+			@printData: "Diferencia de la tónica al final: " + fixed$(diftonfin, 2) + "semitonos."
+			@printData: "Diferencia tónica- centro cola: " + fixed$(dif03, 2) + "semitonos."
+			@printData: "Diferencia centro-final: " + fixed$(dif36, 2) + "semitonos."
+			@printData: "Diferencia centro-máximo: " + fixed$(dif6max, 2) + "semitonos."
 
-			printline diftonfin 'diftonfin'
-			printline dif03 (final tónica- centro cola) 'dif03' dif36 (centro-final) 'dif36' dif6max 'dif6max' dif0max3 'dif0max3'
 
 			
 			etiquetafinal$= "final-no-agudo"
 			etiquetafinalprofunda$="final-no-agudo"
 			##########	monotonales después de L
+			selectObject: myText
+			numeropuntosahora = Get number of points: tier_Tones
 
 			if (tonicaH = 0) and (diftonfin<'umbral')
 				etiquetafinal$ = "L\% "
 				etiquetafinalprofunda$ = "L\% "
-				select TextGrid 'base$'
 				labelstressedprevious$ = Get label of point: tier_Tones, numeropuntosahora
 				if labelstressedprevious$ = "(H+L*)+H" or labelstressedprevious$ = "H+(L*+H)"
 					etiquetafinal$ = "HL\% "
