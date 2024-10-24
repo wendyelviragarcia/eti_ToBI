@@ -84,7 +84,7 @@ form Sp_ToBI Cat_ToBI transcriber
 
 endform
 
-if etiquetaje_profundo = 1
+if etiquetaje_profundo = 1 or etiquetaje_normalizado = 1
 
 	beginPause: "Tipo de etiquetaje"
 		comment: "¿Cuáles de estas etiquetas quieres que aparexcan en el etiquetaje profundo?"
