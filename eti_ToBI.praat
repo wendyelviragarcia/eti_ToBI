@@ -1,4 +1,4 @@
-#	Eti_ToBI v.8 (2024)
+#	Eti_ToBI v.9 (2025)
 # Cite as: Elvira-García, W., Roseano, P., Fernández-Planas, A. M., & Martínez-Celdrán, E. (2016). A tool for automatic transcription of intonation: Eti_ToBI a ToBI transcriber for Spanish and Catalan. Language Resources and Evaluation, 50, 767-792.
 #
 #				DESCRIPTION
@@ -115,7 +115,12 @@ endif
 debug = 0
 verbose = 1
 
-rango$ = "60-600"
+#check Praat version
+if praatVersion < 6424
+	exit Download a Praat 6.4.24 or later version, Eti-ToBI uses the filtered F0 method introduced in 2024.
+endif
+
+rango$ = "50-800"
 from = iniciar_en_archivo
 a = displaced_prenuclear
 b= upstep
@@ -208,10 +213,11 @@ for ifile from 'from' to numberOfFiles
 	selectObject: mySound 
 	filteredSound = Filter (stop Hann band): 2000, 5000, 100
 	Rename: base$
+	
 
-	firstPitch = To Pitch: 0.001, f0_min, f0_max
+	firstPitch= To Pitch (filtered autocorrelation): 0, f0_min, f0_max, 15, "no", 0.03, 0.09, 0.5, 0.055, 0.35, 0.14
+	f0medial= Get mean: 0, 0, "Hertz"
 
-	f0medial = do ("Get mean...", 0, 0, "Hertz")
 	@printData("fileMean: " + fixed$(f0medial,0)+"Hz")
 	
 	#cuantiles teoría de Hirst (2011) analysis by synthesis of speach melody
@@ -234,7 +240,8 @@ for ifile from 'from' to numberOfFiles
 	endif
 
 	selectObject: filteredSound 
-	myPitch = To Pitch: 0.001, minpitch, maxpitch
+	myPitch= To Pitch (filtered autocorrelation): 0, minpitch, maxpitch, 15, "no", 0.03, 0.09, 0.5, 0.055, 0.35, 0.14
+
 	Kill octave jumps
 	removeObject: firstPitch, filteredSound
 
