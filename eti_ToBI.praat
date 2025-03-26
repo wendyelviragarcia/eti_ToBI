@@ -200,6 +200,7 @@ for ifile from 'from' to numberOfFiles
 	#reads grid
 	if fileReadable(folder$ + "/" +base$ + ".TextGrid")
 		myText = Read from file: folder$ + "/" +base$ + ".TextGrid"
+		Replace interval texts: segmentation_tier, 1, 0, """", "ˈ", "literals"
 	else 
 		exitScript: "There are no TextGrids matching your sound " + base$ + ". Check for spaces in filename"
 	endif
