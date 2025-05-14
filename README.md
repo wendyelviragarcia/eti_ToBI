@@ -33,3 +33,11 @@ b) textgrid with the same name than the sound and interval syllables and a mark 
 
  You can find the terms of the GNU General Public License here
  http://www.gnu.org/licenses/gpl-3.0.en.html
+
+
+>[!TIP]
+>Please cite as: Elvira-García, W., Roseano, P., Fernández-Planas, A. M., & Martinez-Celdran, E. (2016). A tool for automatic transcription of intonation: Eti_ToBI a ToBI transcriber for Spanish and Catalan. Language Resources and Evaluation, 50(4), 767-792.
+
+Code citation:
+[![DOI](https://zenodo.org/badge/171128579.svg)](https://doi.org/10.5281/zenodo.15402012)
+
